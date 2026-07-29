@@ -192,7 +192,17 @@ var SUPABASE_ANON_KEY = "GANTI_DENGAN_ANON_KEY_KAMU";
    dipakai waktu bikin akun di Supabase Dashboard (lihat SETUP.md). */
 var LOGIN_DOMAIN = "balokerp.local";
 
-var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+/* Guard: kalau URL/Key masih placeholder (belum diisi lewat SETUP.md), jangan
+   panggil createClient (bisa melempar error & bikin halaman blank). Tampilkan
+   layar "belum dikonfigurasi" yang jelas supaya deploy tetap aman dibuka. */
+var SUPABASE_CONFIGURED =
+  SUPABASE_URL.indexOf("GANTI_DENGAN") === -1 &&
+  SUPABASE_ANON_KEY.indexOf("GANTI_DENGAN") === -1 &&
+  SUPABASE_URL.indexOf("http") === 0;
+
+var supabase = SUPABASE_CONFIGURED
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 
 /* ---------------- constants ---------------- */
 var TABLES = {
@@ -1721,10 +1731,30 @@ function unsubscribeRealtime() {
   realtimeChannels = [];
 }
 
+function configNeededHTML() {
+  return '' +
+    '<div class="login-wrap"><div class="login-card">' +
+    '<div class="login-eyebrow"><div class="brand-badge" style="width:28px;height:28px;font-size:13px;">B</div><span>Balok ERP</span></div>' +
+    '<div class="login-h1">Belum terhubung ke database</div>' +
+    '<div class="login-p">Aplikasi sudah ter-deploy, tapi kredensial Supabase belum diisi. Setelah diisi, halaman ini otomatis berganti jadi halaman login.</div>' +
+    '<ul class="kv-list" style="margin-bottom:6px;">' +
+    '<li><span>1. Buat project &amp; jalankan <b>supabase_schema.sql</b></span></li>' +
+    '<li><span>2. Isi <code>SUPABASE_URL</code> &amp; <code>SUPABASE_ANON_KEY</code> di <b>index.html</b></span></li>' +
+    '<li><span>3. Deploy ulang</span></li>' +
+    '</ul>' +
+    '<div class="login-note">' + ICONS.info + ' <span>Langkah lengkap ada di file <b>SETUP.md</b> pada repo ini.</span></div>' +
+    '</div></div>';
+}
+
 function init() {
   document.addEventListener("click", onClick);
   document.addEventListener("submit", onSubmit);
   document.addEventListener("input", onInput);
+
+  if (!SUPABASE_CONFIGURED) {
+    root().innerHTML = configNeededHTML();
+    return;
+  }
 
   supabase.auth.getSession().then(function (res) {
     var session = res.data && res.data.session;
