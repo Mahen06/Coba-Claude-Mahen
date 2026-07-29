@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Balok ERP — Stok, Progress &amp; Termin</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  :root{
+    --navy:#0F2A43; --navy-light:#173C5F; --amber:#F5A623; --amber-ink:#8A5A00;
+    --cream:#F3F1EC; --cream2:#FBFAF6; --ink:#2B2A24; --muted:#8A8574;
+    --line:#D8D3C4; --line2:#EAE6D9; --green:#1E7A34; --green-bg:#E5F3E7;
+    --red:#C0392B; --red-bg:#FDECEA; --accent-bg:#FFF0D6;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    font-family:'IBM Plex Sans', system-ui, sans-serif;
+    background:var(--cream); color:var(--ink); font-size:14px;
+  }
+  h1,h2,h3,.display{ font-family:'Space Grotesk', sans-serif; }
+  code,.mono{ font-family:'IBM Plex Mono', monospace; }
+  button{ font-family:inherit; cursor:pointer; }
+  input,select{ font-family:inherit; font-size:14px; }
+  .hidden{ display:none !important; }
+
+  /* layout */
+  #root{ min-height:100vh; }
+  .app-shell{ display:flex; min-height:100vh; }
+  .sidebar{
+    width:224px; flex-shrink:0; background:var(--navy); color:var(--cream);
+    display:flex; flex-direction:column;
+  }
+  .sidebar-brand{ display:flex; align-items:center; gap:8px; padding:18px 20px; border-bottom:1px solid rgba(255,255,255,.1); }
+  .brand-badge{ width:32px; height:32px; border-radius:8px; background:var(--amber); color:var(--navy); font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .brand-title{ font-weight:700; font-size:14px; line-height:1; }
+  .brand-sub{ font-size:10px; color:#9FB4C7; margin-top:2px; }
+  .nav{ flex:1; padding:12px 8px; overflow-y:auto; }
+  .nav-sep{ height:1px; background:rgba(255,255,255,.1); margin:8px 8px; }
+  .nav-btn{
+    width:100%; display:flex; align-items:center; gap:10px; padding:9px 12px; margin-bottom:2px;
+    border:none; background:transparent; color:#CBD8E3; border-radius:8px; font-size:13px; text-align:left;
+  }
+  .nav-btn:hover{ background:rgba(255,255,255,.08); }
+  .nav-btn.active{ background:var(--amber); color:var(--navy); font-weight:700; }
+  .nav-emoji{ font-size:15px; width:18px; text-align:center; }
+  .sidebar-foot{ padding:12px; border-top:1px solid rgba(255,255,255,.1); }
+  .me-card{ display:flex; align-items:center; gap:8px; padding:8px; border-radius:8px; background:rgba(255,255,255,.06); }
+  .me-avatar{ width:28px; height:28px; border-radius:999px; background:var(--amber); color:var(--navy); font-weight:700; font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .me-name{ font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .me-role{ font-size:10px; color:#9FB4C7; }
+  .btn-logout{ margin-left:auto; background:none; border:none; color:#9FB4C7; padding:4px; }
+  .btn-logout:hover{ color:#fff; }
+
+  .main{ flex:1; min-width:0; overflow-y:auto; }
+  .topbar{
+    position:sticky; top:0; z-index:5; background:rgba(243,241,236,.92); backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line); padding:12px 24px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .topbar-title{ font-size:11px; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
+  .topbar-status{ font-size:11px; color:var(--muted); display:flex; align-items:center; gap:5px; }
+  .content{ padding:24px; max-width:1200px; }
+
+  /* cards */
+  .stats-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:20px; }
+  .stat-card{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px; box-shadow:0 1px 2px rgba(0,0,0,.03); }
+  .stat-card.warn{ background:var(--navy); color:#FFD98A; border-color:var(--navy); }
+  .stat-icon{ font-size:22px; padding:8px; border-radius:10px; background:rgba(245,166,35,.15); }
+  .stat-value{ font-size:24px; font-weight:700; line-height:1; }
+  .stat-label{ font-size:12px; opacity:.7; margin-top:4px; }
+
+  .section-card{ background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.03); margin-bottom:20px; }
+  .section-card.alert{ border-color:var(--red); box-shadow:0 0 0 1px var(--red) inset; }
+  .section-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:16px 20px; border-bottom:1px solid var(--line2); background:var(--cream2); flex-wrap:wrap; }
+  .section-title{ font-weight:700; color:var(--navy); font-size:15px; }
+  .section-sub{ font-size:12px; color:var(--muted); margin-top:3px; }
+  .section-body{ padding:20px; }
+
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:820px){ .grid-2{ grid-template-columns:1fr; } .app-shell{ flex-direction:column; } .sidebar{ width:100%; } .content{ padding:14px; } }
+
+  /* badges */
+  .badge{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:700; white-space:nowrap; }
+  .badge-neutral{ background:var(--line2); color:#4A4738; }
+  .badge-good{ background:var(--green-bg); color:var(--green); }
+  .badge-warn{ background:var(--red-bg); color:var(--red); }
+  .badge-accent{ background:var(--accent-bg); color:var(--amber-ink); }
+
+  /* buttons */
+  .btn{ border:none; border-radius:8px; font-weight:700; font-size:13px; padding:8px 14px; display:inline-flex; align-items:center; gap:6px; }
+  .btn-primary{ background:var(--navy); color:#fff; }
+  .btn-primary:hover{ background:var(--navy-light); }
+  .btn-accent{ background:var(--amber); color:var(--navy); }
+  .btn-accent:hover{ filter:brightness(0.96); }
+  .btn-sm{ padding:4px 9px; font-size:11.5px; border-radius:6px; }
+  .btn-outline{ background:#fff; border:1px solid var(--line); color:var(--navy); }
+  .btn-outline:hover{ border-color:var(--amber); }
+  .btn-block{ width:100%; justify-content:center; padding:11px; }
+  .btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+  /* forms */
+  .form-panel{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin-bottom:20px; padding:16px; background:var(--cream2); border:1px solid var(--line2); border-radius:10px; }
+  .field{ display:flex; flex-direction:column; gap:5px; }
+  .field-label{ font-size:11px; font-weight:700; color:#4A4738; text-transform:uppercase; letter-spacing:.03em; }
+  .field-label .req{ color:var(--red); }
+  .input{ border:1px solid var(--line); border-radius:6px; padding:8px 10px; font-size:13px; background:#fff; }
+  .input:focus{ outline:2px solid var(--amber); outline-offset:0; border-color:var(--amber); }
+  .form-actions{ grid-column:1 / -1; display:flex; justify-content:flex-end; }
+  .form-error{ grid-column:1 / -1; color:var(--red); font-size:13px; }
+  .form-hint{ grid-column:1 / -1; color:var(--muted); font-size:11.5px; margin-top:-6px; }
+
+  /* table */
+  .filter-toolbar{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); margin-bottom:8px; }
+  .filter-toolbar button{ background:none; border:none; color:var(--amber-ink); font-weight:700; font-size:12px; text-decoration:underline; padding:0; }
+  .table-wrap{ overflow-x:auto; border:1px solid var(--line); border-radius:10px; }
+  table{ width:100%; border-collapse:collapse; min-width:600px; font-size:13px; }
+  thead th{ background:var(--navy); color:var(--cream); text-align:left; padding:10px 12px; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; font-family:'IBM Plex Mono',monospace; white-space:nowrap; user-select:none; }
+  thead th.sortable{ cursor:pointer; }
+  thead th.sortable:hover{ background:var(--navy-light); }
+  th .sort-wrap{ display:inline-flex; align-items:center; gap:4px; }
+  tr.filter-row th{ background:var(--cream2); padding:5px 8px; }
+  .filter-input{ width:100%; min-width:80px; border:1px solid var(--line); border-radius:5px; padding:4px 7px; font-size:11.5px; color:var(--ink); background:#fff; text-transform:none; font-family:'IBM Plex Sans',sans-serif; }
+  .filter-input:focus{ outline:2px solid var(--amber); border-color:var(--amber); }
+  .filter-input::placeholder{ color:#B9B4A4; }
+  tbody td{ padding:9px 12px; border-top:1px solid var(--line2); white-space:nowrap; }
+  tbody tr:nth-child(even){ background:var(--cream2); }
+  tbody tr:hover{ background:var(--accent-bg); }
+  .empty-row td{ text-align:center; color:var(--muted); font-style:italic; padding:26px; }
+
+  ul.kv-list{ list-style:none; margin:0; padding:0; font-size:13px; }
+  ul.kv-list li{ display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--line2); }
+  ul.kv-list li:last-child{ border-bottom:none; }
+  ul.roles-list{ list-style:none; margin:0; padding:0; font-size:13px; display:flex; flex-direction:column; gap:11px; }
+  ul.roles-list li{ display:flex; align-items:center; gap:8px; }
+
+  /* progress bar */
+  .progress-track{ width:100%; min-width:90px; height:9px; background:var(--line2); border-radius:999px; overflow:hidden; }
+  .progress-fill{ height:100%; background:var(--amber); border-radius:999px; }
+  .progress-fill.done{ background:var(--green); }
+  .progress-row{ display:flex; align-items:center; gap:8px; }
+  .progress-pct{ font-size:12px; font-weight:700; width:36px; text-align:right; }
+
+  /* login */
+  .login-wrap{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+    background-color:var(--navy);
+    background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.06) 1px, transparent 0);
+    background-size:22px 22px;
+  }
+  .login-card{ width:100%; max-width:420px; background:var(--cream); border-radius:16px; box-shadow:0 20px 45px rgba(0,0,0,.35); padding:28px; border:1px solid #1c3f5f; }
+  .login-eyebrow{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .login-eyebrow span{ font-size:11px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); }
+  .login-h1{ font-size:24px; font-weight:700; color:var(--navy); margin:2px 0 4px; }
+  .login-p{ font-size:13px; color:#6B6656; margin:0 0 22px; }
+  .role-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+  .role-btn{ text-align:left; border-radius:10px; border:1px solid var(--line); background:#fff; padding:11px; }
+  .role-btn:hover{ border-color:rgba(245,166,35,.6); }
+  .role-btn.active{ border-color:var(--amber); background:var(--accent-bg); box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .role-emoji{ font-size:17px; }
+  .role-name{ font-size:13px; font-weight:700; color:var(--navy); margin-top:4px; }
+  .role-desc{ font-size:11px; color:var(--muted); line-height:1.3; }
+  .login-note{ font-size:11px; color:var(--muted); margin-top:16px; line-height:1.5; display:flex; gap:6px; }
+  .login-error{ color:var(--red); font-size:12.5px; margin-top:10px; }
+
+  .loading-wrap{ min-height:100vh; display:flex; align-items:center; justify-content:center; gap:8px; background:var(--navy); color:var(--cream); }
+  .spin{ animation:spin 1s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .local-mode-banner{ background:#FFF0D6; color:#8A5A00; font-size:12px; padding:8px 24px; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:center; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.45.4/umd/supabase.min.js"></script>
+<script>
+/* ============================================================
+   BALOK ERP — Stok, Mutasi, Progress, Termin & Vendor Material
+   Data disimpan permanen di Supabase (PostgreSQL) supaya semua
+   anggota tim melihat data yang sama secara real-time, di mana pun
+   aplikasi ini di-hosting (Vercel, dsb) — tidak lagi bergantung
+   pada lingkungan Claude.
+
+   WAJIB DIISI sebelum dipakai (lihat SETUP.md):
+   ============================================================ */
+var SUPABASE_URL = "GANTI_DENGAN_PROJECT_URL_KAMU";
+var SUPABASE_ANON_KEY = "GANTI_DENGAN_ANON_KEY_KAMU";
+
+/* Supabase Auth wajib pakai format email. Supaya tim bisa login cukup dengan
+   USERNAME (tanpa perlu ingat domain), kita tempelkan domain ini otomatis
+   di belakang username saat login. Harus SAMA PERSIS dengan domain yang
+   dipakai waktu bikin akun di Supabase Dashboard (lihat SETUP.md). */
+var LOGIN_DOMAIN = "balokerp.local";
+
+var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ---------------- constants ---------------- */
+var TABLES = {
+  barang: "master_barang",
+  lokasi: "master_lokasi",
+  vendor: "master_vendor",
+  masuk: "material_masuk",
+  keluar: "material_keluar",
+  mutasi: "mutasi",
+  harga: "harga_vendor",
+  progress: "progress_proyek",
+  termin: "termin_pembayaran",
+  anggaran: "anggaran_proyek",
+  addendum: "addendum_proyek"
+};
+/* Kolom untuk urutkan data saat pertama kali dimuat dari database */
+var ORDER_COL = {
+  barang: "kode", lokasi: "kode", vendor: "kode",
+  masuk: "created_at", keluar: "created_at", mutasi: "created_at",
+  harga: "created_at", progress: "created_at", termin: "created_at",
+  anggaran: "created_at", addendum: "created_at"
+};
+
+var ROLES = [
+  { id: "Manager", label: "Manager", emoji: "👷", desc: "Akses penuh & lihat semua ringkasan" },
+  { id: "Engineering", label: "Engineering", emoji: "🔧", desc: "Kelola Master Lokasi & Vendor, lapor Progress, Anggaran & Addendum Proyek" },
+  { id: "Logistik", label: "Logistik", emoji: "🚚", desc: "Kelola Master Material & Alat, Vendor, input transaksi & mutasi" },
+  { id: "Finance", label: "Finance", emoji: "💰", desc: "Kelola harga vendor, skema termin & addendum proyek" }
+];
+
+var EDIT_PERMISSION = {
+  barang: ["Manager", "Logistik"],
+  lokasi: ["Manager", "Engineering"],
+  vendor: ["Manager", "Engineering", "Logistik"],
+  masuk: ["Manager", "Logistik"],
+  keluar: ["Manager", "Logistik"],
+  mutasi: ["Manager", "Logistik"],
+  harga: ["Manager", "Finance"],
+  progress: ["Manager", "Engineering"],
+  termin: ["Manager", "Finance"],
+  anggaran: ["Manager", "Engineering"],
+  addendum: ["Manager", "Finance", "Engineering"]
+};
+
+var JENIS_MUTASI_ALAT = ["Pinjam Sementara", "Alat Rusak - Diganti", "Pindah Permanen", "Lainnya"];
+
+var NAV = [
+  { id: "dashboard", label: "Dashboard", emoji: "📊" },
+  { id: "stok", label: "Stok Material & Alat", emoji: "📦" },
+  { id: "perbandingan", label: "Perbandingan Harga", emoji: "⚖️" },
+  { sep: true },
+  { id: "masuk", label: "Material Masuk", emoji: "⬇️" },
+  { id: "keluar", label: "Material Keluar", emoji: "⬆️" },
+  { id: "mutasiMaterial", label: "Mutasi Material", emoji: "🔁" },
+  { id: "mutasiAlat", label: "Mutasi Alat", emoji: "🔀" },
+  { id: "harga", label: "Harga Vendor", emoji: "🏷️" },
+  { sep: true },
+  { id: "progress", label: "Progress Proyek", emoji: "📈" },
+  { id: "anggaran", label: "Anggaran Proyek", emoji: "💰", visibleTo: ["Manager", "Engineering"] },
+  { id: "termin", label: "Skema Pembayaran", emoji: "💳" },
+  { id: "addendum", label: "Addendum / Pekerjaan Tambah", emoji: "📎", visibleTo: ["Manager", "Finance", "Engineering"] },
+  { sep: true },
+  { id: "barang", label: "Master Material & Alat", emoji: "🧱" },
+  { id: "lokasi", label: "Master Lokasi", emoji: "📍" },
+  { id: "vendor", label: "Master Vendor", emoji: "🏬" }
+];
+
+
+var ICONS = {
+  chevronUp: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="18 15 12 9 6 15"/></svg>',
+  chevronDown: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>',
+  chevronsUpDown: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.45"><polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/></svg>',
+  x: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  plus: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  check: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>',
+  alert: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3 L22 20 L2 20 Z"/><line x1="12" y1="9.5" x2="12" y2="14.5"/><circle cx="12" cy="17" r="0.6" fill="currentColor"/></svg>',
+  spinner: '<svg class="spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M21 12a9 9 0 0 0-9-9"/></svg>',
+  info: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.6" fill="currentColor"/></svg>',
+  bell: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>'
+};
+
+/* ---------------- Supabase data layer ---------------- */
+/* konversi nama kolom snake_case (DB) <-> camelCase (dipakai di seluruh UI kode ini) */
+function toCamel(row) {
+  var out = {};
+  for (var k in row) {
+    var ck = k.replace(/_([a-z])/g, function (_, c) { return c.toUpperCase(); });
+    out[ck] = row[k];
+  }
+  return out;
+}
+function toSnake(obj) {
+  var out = {};
+  for (var k in obj) {
+    var sk = k.replace(/[A-Z]/g, function (c) { return "_" + c.toLowerCase(); });
+    out[sk] = obj[k];
+  }
+  return out;
+}
+
+/* ambil semua baris satu tabel, urutkan, konversi ke camelCase */
+function fetchTable(section) {
+  return supabase.from(TABLES[section]).select("*").order(ORDER_COL[section], { ascending: ORDER_COL[section] === "kode" })
+    .then(function (res) {
+      if (res.error) { console.error(TABLES[section], res.error); return []; }
+      return res.data.map(toCamel);
+    });
+}
+
+/* insert baris baru; hapus field id kosong supaya DB yang generate uuid-nya sendiri
+   (kecuali tabel master yang pakai "kode" sebagai primary key, dikirim apa adanya) */
+function insertRow(section, item) {
+  var payload = toSnake(item);
+  if (!payload.kode) delete payload.id;
+  payload.created_by = state.me ? state.me.id : null;
+  return supabase.from(TABLES[section]).insert(payload).select().single().then(function (res) {
+    if (res.error) throw res.error;
+    return toCamel(res.data);
+  });
+}
+
+/* update sebagian kolom pada satu baris (dicocokkan lewat primary key: id atau kode) */
+function updateRow(section, keyCol, keyVal, patch) {
+  var payload = toSnake(patch);
+  payload.updated_by = state.me ? state.me.id : null;
+  return supabase.from(TABLES[section]).update(payload).eq(keyCol, keyVal).select().single().then(function (res) {
+    if (res.error) throw res.error;
+    return toCamel(res.data);
+  });
+}
+
+/* ---------------- format helpers ---------------- */
+function esc(s) {
+  return String(s === undefined || s === null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+function formatRp(n) { return "Rp " + Number(n || 0).toLocaleString("id-ID"); }
+function formatQty(n) { return Number(n || 0).toLocaleString("id-ID"); }
+function formatPct(n) { return Number(n || 0).toLocaleString("id-ID") + "%"; }
+function todayISO() { return new Date().toISOString().slice(0, 10); }
+function nextCode(list, prefix) {
+  var nums = list
+    .map(function (x) { return x.kode; })
+    .filter(function (k) { return k && k.indexOf(prefix + "-") === 0; })
+    .map(function (k) { return parseInt(k.split("-")[1], 10); })
+    .filter(function (n) { return !isNaN(n); });
+  var next = (nums.length ? Math.max.apply(null, nums) : 0) + 1;
+  return prefix + "-" + String(next).padStart(3, "0");
+}
+
+/* ---------------- state ---------------- */
+var state = {
+  ready: false,
+  entering: false,
+  me: null,
+  tab: "dashboard",
+  saving: false,
+  barang: [], lokasi: [], vendor: [], masuk: [], keluar: [], mutasi: [], harga: [], progress: [], termin: [], anggaran: [], addendum: [],
+  sort: {},        // tableId -> { key, dir }
+  filter: {},       // tableId -> { colKey: searchTerm }
+  openForm: {},     // viewId -> bool
+  error: {},        // viewId -> message
+  draft: {},        // viewId -> object of last-attempted field values
+  loginError: ""
+};
+
+var TABLE_REGISTRY = {}; // tableId -> { columns, rows, rowKeyFn, emptyText }
+
+/* ---------------- derived data ---------------- */
+function computeStok() {
+  return state.barang.map(function (b) {
+    var perLokasi = state.lokasi.map(function (l) {
+      var m = state.masuk.filter(function (x) { return x.kodeBarang === b.kode && x.lokasi === l.nama; })
+        .reduce(function (s, x) { return s + Number(x.qty || 0); }, 0);
+      var k = state.keluar.filter(function (x) { return x.kodeBarang === b.kode && x.lokasi === l.nama; })
+        .reduce(function (s, x) { return s + Number(x.qty || 0); }, 0);
+      var mutIn = state.mutasi.filter(function (x) { return x.kodeBarang === b.kode && x.keLokasi === l.nama; })
+        .reduce(function (s, x) { return s + Number(x.qty || 0); }, 0);
+      var mutOut = state.mutasi.filter(function (x) { return x.kodeBarang === b.kode && x.dariLokasi === l.nama; })
+        .reduce(function (s, x) { return s + Number(x.qty || 0); }, 0);
+      return { lokasi: l.nama, stok: m - k + mutIn - mutOut };
+    });
+    var totalMasuk = state.masuk.filter(function (x) { return x.kodeBarang === b.kode; })
+      .reduce(function (s, x) { return s + Number(x.qty || 0); }, 0);
+    var totalKeluar = state.keluar.filter(function (x) { return x.kodeBarang === b.kode; })
+      .reduce(function (s, x) { return s + Number(x.qty || 0); }, 0);
+    var total = totalMasuk - totalKeluar;
+    var out = {};
+    for (var k2 in b) out[k2] = b[k2];
+    out.perLokasi = perLokasi;
+    out.total = total;
+    out.restock = total < Number(b.stokMin || 0);
+    return out;
+  });
+}
+function computePerbandingan() {
+  return state.barang.map(function (b) {
+    var entries = state.harga.filter(function (h) { return h.kodeBarang === b.kode; });
+    var out = {};
+    for (var k in b) out[k] = b[k];
+    if (entries.length === 0) {
+      out.jumlahVendor = 0; out.termurah = null; out.vendorTermurah = null; out.tertinggi = null; out.selisih = null; out.updateTerakhir = null;
+      return out;
+    }
+    var harga = entries.map(function (e) { return Number(e.harga); });
+    var termurah = Math.min.apply(null, harga);
+    var tertinggi = Math.max.apply(null, harga);
+    var entryTermurah = entries.filter(function (e) { return Number(e.harga) === termurah; })[0];
+    var vTermurah = state.vendor.filter(function (v) { return v.kode === entryTermurah.kodeVendor; })[0];
+    var tanggals = entries.map(function (e) { return e.tanggal; }).sort();
+    out.jumlahVendor = entries.length;
+    out.termurah = termurah;
+    out.vendorTermurah = vTermurah ? vTermurah.nama : "-";
+    out.tertinggi = tertinggi;
+    out.selisih = tertinggi - termurah;
+    out.updateTerakhir = tanggals[tanggals.length - 1];
+    return out;
+  });
+}
+/* progress terkini (terbaru berdasarkan tanggal) untuk satu lokasi proyek */
+function currentProgress(lokasiNama) {
+  var entries = state.progress.filter(function (p) { return p.lokasiProyek === lokasiNama; });
+  if (!entries.length) return null;
+  var sorted = entries.slice().sort(function (a, b) { return a.tanggal < b.tanggal ? 1 : (a.tanggal > b.tanggal ? -1 : 0); });
+  return sorted[0];
+}
+/* anggaran terkini (terbaru berdasarkan tanggal) untuk satu lokasi proyek */
+function currentAnggaran(lokasiNama) {
+  var entries = state.anggaran.filter(function (a) { return a.lokasiProyek === lokasiNama; });
+  if (!entries.length) return null;
+  var sorted = entries.slice().sort(function (a, b) { return a.tanggal < b.tanggal ? 1 : (a.tanggal > b.tanggal ? -1 : 0); });
+  return sorted[0];
+}
+/* status satu baris termin: 'pending' (belum tercapai), 'due' (tercapai, perlu ditagih),
+   'ditagih' (sudah ditagih, menunggu bayar), 'lunas' (sudah terbayar) */
+function terminStatus(t) {
+  if (t.sudahTerbayar) return "lunas";
+  if (t.sudahDitagih) return "ditagih";
+  var cp = currentProgress(t.lokasiProyek);
+  var progress = cp ? Number(cp.persenProgress) : 0;
+  return progress >= Number(t.progressMinimum) ? "due" : "pending";
+}
+function dueTermins() {
+  return state.termin.filter(function (t) { return terminStatus(t) === "due"; });
+}
+/* apakah role saat ini boleh MELIHAT tab tertentu (beberapa tab dibatasi per role) */
+function canViewTab(tabId) {
+  var item = NAV.filter(function (n) { return n.id === tabId; })[0];
+  if (!item || !item.visibleTo) return true;
+  return state.me && item.visibleTo.indexOf(state.me.role) !== -1;
+}
+
+/* ---------------- generic table renderer (sort + per-column filter) ---------------- */
+function getFilter(tableId, colKey) {
+  return (state.filter[tableId] && state.filter[tableId][colKey]) || "";
+}
+function setFilter(tableId, colKey, val) {
+  if (!state.filter[tableId]) state.filter[tableId] = {};
+  state.filter[tableId][colKey] = val;
+}
+function isFilterActive(tableId) {
+  var f = state.filter[tableId];
+  if (!f) return false;
+  return Object.keys(f).some(function (k) { return f[k] && f[k].trim() !== ""; });
+}
+function getColValue(row, col) {
+  if (col.filterVal) return col.filterVal(row);
+  if (col.sortVal) return col.sortVal(row);
+  return row[col.key];
+}
+function filterRows(tableId, rows, columns) {
+  var f = state.filter[tableId];
+  if (!f) return rows;
+  var activeKeys = Object.keys(f).filter(function (k) { return f[k] && f[k].trim() !== ""; });
+  if (!activeKeys.length) return rows;
+  return rows.filter(function (row) {
+    return activeKeys.every(function (key) {
+      var col = columns.filter(function (c) { return c.key === key; })[0];
+      if (!col) return true;
+      var val = getColValue(row, col);
+      val = String(val === undefined || val === null ? "" : val).toLowerCase();
+      return val.indexOf(f[key].toLowerCase()) !== -1;
+    });
+  });
+}
+function sortRows(tableId, rows, columns) {
+  var s = state.sort[tableId];
+  if (!s) return rows;
+  var col = columns.filter(function (c) { return c.key === s.key; })[0];
+  if (!col) return rows;
+  var copy = rows.slice();
+  copy.sort(function (a, b) {
+    var va = getColValue(a, col);
+    var vb = getColValue(b, col);
+    if (typeof va === "number" && typeof vb === "number") return s.dir === "asc" ? va - vb : vb - va;
+    va = String(va === undefined || va === null ? "" : va).toLowerCase();
+    vb = String(vb === undefined || vb === null ? "" : vb).toLowerCase();
+    if (va < vb) return s.dir === "asc" ? -1 : 1;
+    if (va > vb) return s.dir === "asc" ? 1 : -1;
+    return 0;
+  });
+  return copy;
+}
+function buildTbodyHTML(columns, rows, emptyText) {
+  if (rows.length === 0) {
+    return '<tr class="empty-row"><td colspan="' + columns.length + '">' + esc(emptyText || "Tidak ada data yang cocok") + '</td></tr>';
+  }
+  return rows.map(function (row) {
+    var cells = columns.map(function (c) {
+      var val = c.render ? c.render(row) : esc(row[c.key]);
+      return '<td>' + val + '</td>';
+    }).join("");
+    return '<tr>' + cells + '</tr>';
+  }).join("");
+}
+function tableHTML(tableId, columns, rows, rowKeyFn, emptyText) {
+  TABLE_REGISTRY[tableId] = { columns: columns, rows: rows, rowKeyFn: rowKeyFn, emptyText: emptyText };
+
+  var s = state.sort[tableId];
+  var filtered = filterRows(tableId, rows, columns);
+  var sorted = sortRows(tableId, filtered, columns);
+
+  var headerRow = columns.map(function (c) {
+    var sortable = c.sortable !== false;
+    var icon = ICONS.chevronsUpDown;
+    if (sortable && s && s.key === c.key) icon = s.dir === "asc" ? ICONS.chevronUp : ICONS.chevronDown;
+    return '<th class="' + (sortable ? "sortable" : "") + '"' +
+      (sortable ? ' data-sort-table="' + tableId + '" data-sort-key="' + c.key + '"' : '') + '>' +
+      '<span class="sort-wrap">' + esc(c.label) + (sortable ? icon : "") + '</span></th>';
+  }).join("");
+
+  var filterRow = columns.map(function (c) {
+    if (c.filterable === false) return '<th></th>';
+    var val = getFilter(tableId, c.key);
+    return '<th><input class="filter-input" type="text" placeholder="Cari ' + esc(c.label) + '..." data-filter-table="' + tableId + '" data-filter-col="' + c.key + '" value="' + esc(val) + '"/></th>';
+  }).join("");
+
+  var tbody = buildTbodyHTML(columns, sorted, emptyText);
+  var toolbarHTML = filterToolbarHTML(tableId, filtered.length, rows.length);
+
+  return '<div id="tablecontainer-' + tableId + '">' + toolbarHTML +
+    '<div class="table-wrap" id="tablewrap-' + tableId + '">' +
+    '<table><thead><tr>' + headerRow + '</tr><tr class="filter-row">' + filterRow + '</tr></thead>' +
+    '<tbody id="tbody-' + tableId + '">' + tbody + '</tbody></table></div></div>';
+}
+function filterToolbarHTML(tableId, filteredCount, totalCount) {
+  if (!isFilterActive(tableId)) return "";
+  return '<div class="filter-toolbar" id="toolbar-' + tableId + '">' + ICONS.info + ' Menyaring ' + filteredCount + ' dari ' + totalCount + ' baris ' +
+    '<button type="button" data-clear-filter="' + tableId + '">Reset pencarian</button></div>';
+}
+function updateTbodyOnly(tableId) {
+  var reg = TABLE_REGISTRY[tableId];
+  if (!reg) return;
+  var filtered = filterRows(tableId, reg.rows, reg.columns);
+  var sorted = sortRows(tableId, filtered, reg.columns);
+  var tbodyEl = document.getElementById("tbody-" + tableId);
+  if (tbodyEl) tbodyEl.innerHTML = buildTbodyHTML(reg.columns, sorted, reg.emptyText);
+
+  var container = document.getElementById("tablecontainer-" + tableId);
+  var toolbarEl = document.getElementById("toolbar-" + tableId);
+  var newToolbarHTML = filterToolbarHTML(tableId, filtered.length, reg.rows.length);
+  if (newToolbarHTML) {
+    if (toolbarEl) toolbarEl.outerHTML = newToolbarHTML;
+    else if (container) container.insertAdjacentHTML("afterbegin", newToolbarHTML);
+  } else if (toolbarEl) {
+    toolbarEl.remove();
+  }
+}
+function renderTableWrap(tableId) {
+  var reg = TABLE_REGISTRY[tableId];
+  if (!reg) return;
+  var containerEl = document.getElementById("tablecontainer-" + tableId);
+  if (!containerEl) return;
+  containerEl.outerHTML = tableHTML(tableId, reg.columns, reg.rows, reg.rowKeyFn, reg.emptyText);
+}
+function badge(text, tone) {
+  return '<span class="badge badge-' + (tone || "neutral") + '">' + text + '</span>';
+}
+function progressBarHTML(pct) {
+  var p = Math.max(0, Math.min(100, Number(pct || 0)));
+  return '<div class="progress-row"><div class="progress-track"><div class="progress-fill' + (p >= 100 ? " done" : "") + '" style="width:' + p + '%"></div></div><span class="progress-pct">' + p + '%</span></div>';
+}
+
+/* ---------------- root render ---------------- */
+function root() { return document.getElementById("root"); }
+
+function renderApp() {
+  if (!state.ready) {
+    root().innerHTML = '<div class="loading-wrap">' + ICONS.spinner + ' Memuat data bersama tim...</div>';
+    return;
+  }
+  if (!state.me) {
+    root().innerHTML = loginHTML();
+    return;
+  }
+  root().innerHTML = shellHTML();
+}
+
+/* ---------------- login ---------------- */
+function loginHTML() {
+  var draft = state.draft.login || {};
+  return '' +
+    '<div class="login-wrap"><div class="login-card">' +
+    '<div class="login-eyebrow"><div class="brand-badge" style="width:28px;height:28px;font-size:13px;">B</div><span>Balok ERP</span></div>' +
+    '<div class="login-h1">Masuk ke sistem</div>' +
+    '<div class="login-p">Masuk dengan akun yang sudah dibuatkan admin untuk mulai memantau stok, progress, dan termin proyek.</div>' +
+    '<form id="form-login">' +
+    '<div class="field"><span class="field-label">Username <span class="req">*</span></span>' +
+    '<input class="input" type="text" name="username" id="inputUsername" autocomplete="username" placeholder="Contoh: mahen" value="' + esc(draft.username || "") + '" /></div>' +
+    '<div class="field" style="margin-top:12px;"><span class="field-label">Password <span class="req">*</span></span>' +
+    '<input class="input" type="password" name="password" autocomplete="current-password" placeholder="••••••••" /></div>' +
+    (state.loginError ? '<div class="login-error">' + esc(state.loginError) + '</div>' : '') +
+    '<button type="submit" class="btn btn-primary btn-block" style="margin-top:18px;" ' + (state.entering ? "disabled" : "") + '>' +
+    (state.entering ? ICONS.spinner : "") + ' Masuk</button>' +
+    '</form>' +
+    '<div class="login-note">' + ICONS.info + ' <span>Belum punya akun? Minta admin/Manager membuatkan lewat Supabase Dashboard (lihat SETUP.md).</span></div>' +
+    '</div></div>';
+}
+
+/* ---------------- shell (sidebar + topbar + content) ---------------- */
+function shellHTML() {
+  var due = dueTermins();
+  var navHTML = NAV.filter(function (item) {
+    return item.sep || !item.visibleTo || (state.me && item.visibleTo.indexOf(state.me.role) !== -1);
+  }).map(function (item) {
+    if (item.sep) return '<div class="nav-sep"></div>';
+    var extra = (item.id === "termin" && due.length) ? ' <span class="badge badge-warn" style="margin-left:auto;">' + due.length + '</span>' : "";
+    return '<button class="nav-btn' + (state.tab === item.id ? " active" : "") + '" data-nav="' + item.id + '">' +
+      '<span class="nav-emoji">' + item.emoji + '</span>' + esc(item.label) + extra + '</button>';
+  }).join("");
+
+  var currentLabel = NAV.filter(function (n) { return n.id === state.tab; })[0];
+  currentLabel = currentLabel ? currentLabel.label : "";
+
+  return '' +
+    '<div class="app-shell">' +
+    '<aside class="sidebar">' +
+    '<div class="sidebar-brand"><div class="brand-badge">B</div><div><div class="brand-title">Balok ERP</div><div class="brand-sub">Stok, Progress &amp; Termin</div></div></div>' +
+    '<nav class="nav">' + navHTML + '</nav>' +
+    '<div class="sidebar-foot"><div class="me-card">' +
+    '<div class="me-avatar">' + esc(state.me.nama.slice(0, 1).toUpperCase()) + '</div>' +
+    '<div><div class="me-name">' + esc(state.me.nama) + '</div><div class="me-role">' + esc(state.me.role) + '</div></div>' +
+    '<button class="btn-logout" data-action="logout" title="Keluar">' + logoutIcon() + '</button>' +
+    '</div></div>' +
+    '</aside>' +
+    '<main class="main">' +
+    '<div class="topbar"><div class="topbar-title">' + esc(currentLabel) + '</div>' +
+    '<div class="topbar-status">' + (state.saving ? (ICONS.spinner + ' Menyimpan...') : (ICONS.check + ' Tersimpan &amp; dibagikan ke tim')) + '</div></div>' +
+    '<div class="content">' + tabContentHTML() + '</div>' +
+    '</main>' +
+    '</div>';
+}
+function logoutIcon() {
+  return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
+}
+
+function tabContentHTML() {
+  if (!canViewTab(state.tab)) {
+    return sectionCard("Akses dibatasi", "", "", "<p style=\"color:var(--muted);\">Halaman ini tidak tersedia untuk peran " + esc(state.me.role) + ".</p>");
+  }
+  switch (state.tab) {
+    case "dashboard": return dashboardView();
+    case "stok": return stokView();
+    case "perbandingan": return perbandinganView();
+    case "masuk": return transaksiView("masuk");
+    case "keluar": return transaksiView("keluar");
+    case "mutasiMaterial": return mutasiView("Material");
+    case "mutasiAlat": return mutasiView("Alat");
+    case "harga": return hargaVendorView();
+    case "progress": return progressView();
+    case "anggaran": return anggaranView();
+    case "termin": return terminView();
+    case "addendum": return addendumView();
+    case "barang": return masterBarangView();
+    case "lokasi": return masterLokasiView();
+    case "vendor": return masterVendorView();
+    default: return "";
+  }
+}
+
+/* ---------------- Dashboard ---------------- */
+function dashboardView() {
+  var stokBarang = computeStok();
+  var restockList = stokBarang.filter(function (b) { return b.restock; });
+  var mutasiMaterialCount = state.mutasi.filter(function (m) {
+    var it = state.barang.filter(function (b) { return b.kode === m.kodeBarang; })[0];
+    return it && it.kategori === "Material";
+  }).length;
+  var mutasiAlatCount = state.mutasi.length - mutasiMaterialCount;
+  var due = dueTermins();
+  var menungguBayar = state.termin.filter(function (t) { return terminStatus(t) === "ditagih"; });
+
+  var statCards = [
+    { label: "Jenis Material &amp; Alat", value: state.barang.length, icon: "📦" },
+    { label: "Lokasi Proyek", value: state.lokasi.length, icon: "📍" },
+    { label: "Perlu Restock", value: restockList.length, icon: "⚠️", warn: restockList.length > 0 },
+    { label: "Termin Perlu Ditindaklanjuti", value: due.length, icon: "🔔", warn: due.length > 0 },
+    { label: "Termin Menunggu Pembayaran", value: menungguBayar.length, icon: "⏳", warn: menungguBayar.length > 0 }
+  ].map(function (c) {
+    return '<div class="stat-card' + (c.warn ? " warn" : "") + '"><div class="stat-icon">' + c.icon + '</div>' +
+      '<div><div class="stat-value">' + c.value + '</div><div class="stat-label">' + c.label + '</div></div></div>';
+  }).join("");
+
+  var dueCols = [
+    { key: "lokasiProyek", label: "Proyek" },
+    { key: "namaTermin", label: "Termin" },
+    { key: "persenPembayaran", label: "Nilai Termin", render: function (r) { return formatPct(r.persenPembayaran); } },
+    { key: "progressMinimum", label: "Ambang Progress", render: function (r) { return formatPct(r.progressMinimum); } },
+    { key: "progressSaatIni", label: "Progress Saat Ini", sortable: false, render: function (r) { var cp = currentProgress(r.lokasiProyek); return formatPct(cp ? cp.persenProgress : 0); } },
+    { key: "aksi", label: "", sortable: false, filterable: false, render: function (r) {
+        var canEdit = state.me && EDIT_PERMISSION.termin.indexOf(state.me.role) !== -1;
+        return canEdit ? '<button type="button" class="btn btn-outline btn-sm" data-toggle-tagih="' + r.id + '">Tandai Sudah Ditagih</button>' : "";
+      } }
+  ];
+
+  var dashboardBody = '<div class="stats-grid">' + statCards + '</div>';
+
+  if (due.length) {
+    dashboardBody += '<div class="section-card alert"><div class="section-head"><div>' +
+      '<div class="section-title">' + ICONS.bell + ' Termin perlu ditindaklanjuti — hubungi klien</div>' +
+      '<div class="section-sub">Progress lapangan sudah mencapai atau melebihi ambang termin berikut, tapi belum ditandai ditagih</div>' +
+      '</div>' + badge(due.length + " termin", "warn") + '</div><div class="section-body">' +
+      tableHTML("dash-termin-due", dueCols, due, function (r) { return r.id; }) +
+      '</div></div>';
+  }
+
+  var proyekCols = [
+    { key: "nama", label: "Proyek" },
+    { key: "progress", label: "Progress Terkini", sortable: false, filterable: false, render: function (r) { var cp = currentProgress(r.nama); return progressBarHTML(cp ? cp.persenProgress : 0); } },
+    { key: "tahap", label: "Tahap Terakhir", sortable: false, render: function (r) { var cp = currentProgress(r.nama); return esc(cp && cp.tahap ? cp.tahap : "-"); } },
+    { key: "termin", label: "Termin Tercapai", sortable: false, filterable: false, render: function (r) {
+        var ts = state.termin.filter(function (t) { return t.lokasiProyek === r.nama; });
+        var tercapai = ts.filter(function (t) { return terminStatus(t) !== "pending"; }).length;
+        return tercapai + " / " + ts.length;
+      } },
+    { key: "statusTermin", label: "Status Termin", sortable: false, filterable: false, render: function (r) {
+        var ts = state.termin.filter(function (t) { return t.lokasiProyek === r.nama; });
+        var dueCount = ts.filter(function (t) { return terminStatus(t) === "due"; }).length;
+        return dueCount ? badge(ICONS.bell + " " + dueCount + " perlu ditagih", "warn") : badge("Aman", "good");
+      } }
+  ];
+
+  dashboardBody += sectionCard("Ringkasan progress &amp; termin per proyek", "Pantauan gabungan untuk Manager — data dari laporan Engineering &amp; skema Finance", "",
+    tableHTML("dash-proyek", proyekCols, state.lokasi, function (r) { return r.kode; }));
+
+  dashboardBody += sectionCard("Material &amp; alat perlu restock", "Total stok semua lokasi berada di bawah stok minimum",
+    badge(restockList.length + " item", restockList.length ? "warn" : "good"),
+    tableHTML("dash-restock", [
+      { key: "kode", label: "Kode" },
+      { key: "nama", label: "Nama Material/Alat" },
+      { key: "total", label: "Total Stok", render: function (r) { return formatQty(r.total); } },
+      { key: "stokMin", label: "Stok Minimum", render: function (r) { return formatQty(r.stokMin); } },
+      { key: "kekurangan", label: "Kekurangan", sortable: false, filterVal: function (r) { return r.stokMin - r.total; }, render: function (r) { return '<span style="color:var(--red);font-weight:700;">' + formatQty(r.stokMin - r.total) + '</span>'; } }
+    ], restockList, function (r) { return r.kode; }, "Semua stok aman 🎉"));
+
+  dashboardBody += '<div class="grid-2">' +
+    sectionCard("Aktivitas transaksi", "Total data tercatat", "",
+      '<ul class="kv-list">' +
+      '<li><span>Input Material Masuk</span><b>' + state.masuk.length + '</b></li>' +
+      '<li><span>Input Material Keluar</span><b>' + state.keluar.length + '</b></li>' +
+      '<li><span>Mutasi Material</span><b>' + mutasiMaterialCount + '</b></li>' +
+      '<li><span>Mutasi Alat</span><b>' + mutasiAlatCount + '</b></li>' +
+      '<li><span>Laporan Progress</span><b>' + state.progress.length + '</b></li>' +
+      '<li><span>Data Harga Vendor</span><b>' + state.harga.length + '</b></li>' +
+      '<li><span>Addendum Proyek</span><b>' + state.addendum.length + '</b></li>' +
+      '</ul>') +
+    sectionCard("Alur kerja tim", "Siapa mengisi apa", "",
+      '<ul class="roles-list">' +
+      '<li>🔧 <span><b>Engineering</b> — kelola Master Lokasi &amp; Vendor, lapor Progress, Anggaran &amp; Addendum Proyek</span></li>' +
+      '<li>🚚 <span><b>Logistik</b> — kelola Master Material &amp; Alat, Vendor, input transaksi &amp; mutasi</span></li>' +
+      '<li>💰 <span><b>Finance</b> — kelola Harga Vendor, Skema Pembayaran (termin) &amp; Addendum</span></li>' +
+      '<li>👷 <span><b>Manager</b> — memantau semua dari Dashboard, termasuk notice termin &amp; anggaran proyek</span></li>' +
+      '</ul>') +
+    '</div>';
+
+  return dashboardBody;
+}
+
+function sectionCard(title, subtitle, right, body) {
+  return '<div class="section-card"><div class="section-head"><div>' +
+    '<div class="section-title">' + title + '</div>' +
+    (subtitle ? '<div class="section-sub">' + subtitle + '</div>' : '') +
+    '</div>' + (right || "") + '</div><div class="section-body">' + body + '</div></div>';
+}
+
+/* ---------------- Stok Material & Alat ---------------- */
+function stokView() {
+  var stokBarang = computeStok();
+  var columns = [
+    { key: "kode", label: "Kode" },
+    { key: "nama", label: "Nama Material/Alat" },
+    { key: "kategori", label: "Kategori" },
+    { key: "satuan", label: "Satuan" }
+  ];
+  state.lokasi.forEach(function (l) {
+    columns.push({
+      key: "lok_" + l.kode, label: l.nama, sortable: false, filterable: false,
+      render: function (r) {
+        var found = r.perLokasi.filter(function (p) { return p.lokasi === l.nama; })[0];
+        return formatQty(found ? found.stok : 0);
+      }
+    });
+  });
+  columns.push({ key: "total", label: "Total", render: function (r) { return '<b>' + formatQty(r.total) + '</b>'; } });
+  columns.push({
+    key: "restock", label: "Status", sortable: false, filterVal: function (r) { return r.restock ? "Perlu Restock" : "Aman"; },
+    render: function (r) { return r.restock ? badge(ICONS.alert + " Perlu Restock", "warn") : badge(ICONS.check + " Aman", "good"); }
+  });
+
+  return sectionCard(
+    "Stok material &amp; alat per lokasi proyek",
+    "Bertambah dari Material Masuk &amp; Mutasi Masuk, berkurang dari Material Keluar &amp; Mutasi Keluar — dicocokkan berdasarkan item &amp; lokasi yang sama",
+    "",
+    tableHTML("stok", columns, stokBarang, function (r) { return r.kode; })
+  );
+}
+
+/* ---------------- Perbandingan Harga ---------------- */
+function perbandinganView() {
+  var data = computePerbandingan();
+  var columns = [
+    { key: "kode", label: "Kode" },
+    { key: "nama", label: "Nama Material" },
+    { key: "jumlahVendor", label: "Jml Vendor" },
+    { key: "termurah", label: "Harga Termurah", render: function (r) { return r.termurah != null ? '<span style="color:var(--green);font-weight:700;">' + formatRp(r.termurah) + '</span>' : "-"; } },
+    { key: "vendorTermurah", label: "Vendor Termurah", render: function (r) { return esc(r.vendorTermurah || "-"); } },
+    { key: "tertinggi", label: "Harga Tertinggi", render: function (r) { return r.tertinggi != null ? formatRp(r.tertinggi) : "-"; } },
+    { key: "selisih", label: "Selisih", render: function (r) { return r.selisih != null ? formatRp(r.selisih) : "-"; } },
+    { key: "updateTerakhir", label: "Update Terakhir", render: function (r) { return esc(r.updateTerakhir || "-"); } }
+  ];
+  return sectionCard("Perbandingan harga vendor", "Vendor termurah otomatis per material, untuk bantu keputusan pembelian", "",
+    tableHTML("perbandingan", columns, data, function (r) { return r.kode; }));
+}
+
+/* ---------------- Transaksi (Material Masuk / Keluar) ---------------- */
+function transaksiView(jenis) {
+  var data = state[jenis];
+  var isMasuk = jenis === "masuk";
+  var title = "Input Material " + (isMasuk ? "Masuk" : "Keluar");
+  var subtitle = isMasuk ? "Setiap material/alat baru yang masuk ke suatu lokasi (dari vendor, gudang, atau sumber lain)" : "Setiap material/alat yang keluar/terpakai di suatu lokasi proyek";
+  var refLabel = isMasuk ? "No. PO / Surat Jalan" : "No. SPK";
+  var canEdit = state.me && EDIT_PERMISSION[jenis].indexOf(state.me.role) !== -1;
+  var open = !!state.openForm[jenis];
+  var barangMap = {};
+  state.barang.forEach(function (b) { barangMap[b.kode] = b; });
+
+  var right = canEdit
+    ? '<button class="btn btn-primary" data-toggle-form="' + jenis + '">' + (open ? ICONS.x : ICONS.plus) + ' ' + (open ? "Batal" : "Tambah") + '</button>'
+    : badge("Hanya lihat — perlu peran Logistik/Manager untuk input", "neutral");
+
+  var formBlock = "";
+  if (open && canEdit) {
+    var draft = state.draft[jenis] || {};
+    var barangOptions = state.barang.map(function (b) {
+      return '<option value="' + esc(b.kode) + '"' + (draft.kodeBarang === b.kode ? " selected" : "") + '>' + esc(b.kode) + ' — ' + esc(b.nama) + '</option>';
+    }).join("");
+    var lokasiOptions = state.lokasi.map(function (l) {
+      return '<option value="' + esc(l.nama) + '"' + (draft.lokasi === l.nama ? " selected" : "") + '>' + esc(l.nama) + '</option>';
+    }).join("");
+    var satuan = barangMap[draft.kodeBarang] ? barangMap[draft.kodeBarang].satuan : "satuan";
+
+    var dariField = "";
+    if (isMasuk) {
+      var dariOptions = state.vendor.map(function (v) { return '<option value="' + esc(v.nama) + '">'; }).join("") +
+        state.lokasi.map(function (l) { return '<option value="' + esc(l.nama) + '">'; }).join("");
+      dariField = '<div class="field"><span class="field-label">Dari (asal)</span>' +
+        '<input class="input" name="dari" list="daftarAsal-' + jenis + '" placeholder="Vendor, gudang, atau sumber lain" value="' + esc(draft.dari || "") + '"/>' +
+        '<datalist id="daftarAsal-' + jenis + '">' + dariOptions + '</datalist></div>';
+    }
+
+    var lokasiFieldLabel = isMasuk ? "Tujuan (lokasi penerima)" : "Lokasi";
+
+    formBlock = '<form id="form-' + jenis + '" class="form-panel">' +
+      '<div class="field"><span class="field-label">Tanggal <span class="req">*</span></span><input class="input" type="date" name="tanggal" value="' + esc(draft.tanggal || todayISO()) + '"/></div>' +
+      '<div class="field"><span class="field-label">Material / Alat <span class="req">*</span></span><select class="input" name="kodeBarang"><option value="">Pilih material/alat...</option>' + barangOptions + '</select></div>' +
+      dariField +
+      '<div class="field"><span class="field-label">' + lokasiFieldLabel + ' <span class="req">*</span></span><select class="input" name="lokasi"><option value="">Pilih lokasi...</option>' + lokasiOptions + '</select></div>' +
+      '<div class="field"><span class="field-label">Qty (' + esc(satuan) + ') <span class="req">*</span></span><input class="input" type="number" min="1" name="qty" value="' + esc(draft.qty || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">' + esc(refLabel) + '</span><input class="input" name="noRef" value="' + esc(draft.noRef || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Keterangan</span><input class="input" name="keterangan" value="' + esc(draft.keterangan || "") + '"/></div>' +
+      (state.error[jenis] ? '<div class="form-error">' + esc(state.error[jenis]) + '</div>' : "") +
+      '<div class="form-actions"><button type="submit" class="btn btn-accent">Simpan sebagai ' + esc(state.me.nama) + '</button></div>' +
+      '</form>';
+  }
+
+  var columns = [
+    { key: "tanggal", label: "Tanggal" },
+    { key: "kodeBarang", label: "Kode" },
+    { key: "namaBarang", label: "Nama Material/Alat", sortVal: function (r) { return barangMap[r.kodeBarang] ? barangMap[r.kodeBarang].nama : r.kodeBarang; }, render: function (r) { return esc(barangMap[r.kodeBarang] ? barangMap[r.kodeBarang].nama : r.kodeBarang); } }
+  ];
+  if (isMasuk) columns.push({ key: "dari", label: "Dari" });
+  columns.push({ key: "lokasi", label: isMasuk ? "Tujuan" : "Lokasi" });
+  columns.push({ key: "qty", label: "Qty", render: function (r) { return formatQty(r.qty) + " " + esc(barangMap[r.kodeBarang] ? barangMap[r.kodeBarang].satuan : ""); } });
+  columns.push({ key: "noRef", label: "No. Referensi" });
+  columns.push({ key: "pic", label: "PIC" });
+  columns.push({ key: "keterangan", label: "Keterangan" });
+
+  return sectionCard(title, subtitle, right, formBlock + tableHTML("tx-" + jenis, columns, data, function (r) { return r.id; }));
+}
+
+/* ---------------- Mutasi (Material / Alat) ---------------- */
+function mutasiView(kategori) {
+  var isAlat = kategori === "Alat";
+  var title = "Mutasi " + kategori;
+  var subtitle = isAlat
+    ? "Pindahkan alat antar lokasi proyek — misalnya alat rusak diganti, dipinjam, atau dipindah permanen ke proyek lain"
+    : "Pindahkan material antar lokasi — misalnya semen dari Gudang Pusat ke Proyek A, atau dari Proyek A ke Proyek B";
+  var canEdit = state.me && EDIT_PERMISSION.mutasi.indexOf(state.me.role) !== -1;
+  var viewId = isAlat ? "mutasiAlat" : "mutasiMaterial";
+  var open = !!state.openForm[viewId];
+
+  var itemsInKategori = state.barang.filter(function (b) { return b.kategori === kategori; });
+  var itemKodes = {};
+  itemsInKategori.forEach(function (b) { itemKodes[b.kode] = true; });
+  var dataFiltered = state.mutasi.filter(function (m) { return itemKodes[m.kodeBarang]; });
+
+  var barangMap = {}; state.barang.forEach(function (b) { barangMap[b.kode] = b; });
+
+  var right = canEdit
+    ? '<button class="btn btn-primary" data-toggle-form="' + viewId + '">' + (open ? ICONS.x : ICONS.plus) + ' ' + (open ? "Batal" : "Tambah Mutasi") + '</button>'
+    : badge("Hanya lihat — perlu peran Logistik/Manager untuk input", "neutral");
+
+  var formBlock = "";
+  if (open && canEdit) {
+    var draft = state.draft[viewId] || {};
+    var barangOptions = itemsInKategori.map(function (b) {
+      return '<option value="' + esc(b.kode) + '"' + (draft.kodeBarang === b.kode ? " selected" : "") + '>' + esc(b.kode) + ' — ' + esc(b.nama) + '</option>';
+    }).join("");
+    var lokasiOptionsDari = state.lokasi.map(function (l) {
+      return '<option value="' + esc(l.nama) + '"' + (draft.dariLokasi === l.nama ? " selected" : "") + '>' + esc(l.nama) + '</option>';
+    }).join("");
+    var lokasiOptionsKe = state.lokasi.map(function (l) {
+      return '<option value="' + esc(l.nama) + '"' + (draft.keLokasi === l.nama ? " selected" : "") + '>' + esc(l.nama) + '</option>';
+    }).join("");
+    var satuan = barangMap[draft.kodeBarang] ? barangMap[draft.kodeBarang].satuan : "satuan";
+
+    var jenisField = "";
+    if (isAlat) {
+      var jenisOptions = JENIS_MUTASI_ALAT.map(function (j) {
+        return '<option value="' + esc(j) + '"' + (draft.jenisMutasi === j ? " selected" : "") + '>' + esc(j) + '</option>';
+      }).join("");
+      jenisField = '<div class="field"><span class="field-label">Jenis Mutasi</span><select class="input" name="jenisMutasi"><option value="">Pilih jenis...</option>' + jenisOptions + '</select></div>';
+    }
+
+    formBlock = '<form id="form-' + viewId + '" class="form-panel">' +
+      '<div class="field"><span class="field-label">Tanggal <span class="req">*</span></span><input class="input" type="date" name="tanggal" value="' + esc(draft.tanggal || todayISO()) + '"/></div>' +
+      '<div class="field"><span class="field-label">' + esc(kategori) + ' <span class="req">*</span></span><select class="input" name="kodeBarang"><option value="">Pilih ' + esc(kategori.toLowerCase()) + '...</option>' + barangOptions + '</select></div>' +
+      '<div class="field"><span class="field-label">Dari Lokasi <span class="req">*</span></span><select class="input" name="dariLokasi"><option value="">Pilih lokasi asal...</option>' + lokasiOptionsDari + '</select></div>' +
+      '<div class="field"><span class="field-label">Ke Lokasi <span class="req">*</span></span><select class="input" name="keLokasi"><option value="">Pilih lokasi tujuan...</option>' + lokasiOptionsKe + '</select></div>' +
+      '<div class="field"><span class="field-label">Qty (' + esc(satuan) + ') <span class="req">*</span></span><input class="input" type="number" min="1" name="qty" value="' + esc(draft.qty || "") + '"/></div>' +
+      jenisField +
+      '<div class="field"><span class="field-label">No. Referensi</span><input class="input" name="noRef" value="' + esc(draft.noRef || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Keterangan</span><input class="input" name="keterangan" value="' + esc(draft.keterangan || "") + '"/></div>' +
+      '<div class="form-hint">Stok otomatis berkurang di "Dari Lokasi" dan bertambah di "Ke Lokasi" untuk item yang sama.</div>' +
+      (state.error[viewId] ? '<div class="form-error">' + esc(state.error[viewId]) + '</div>' : "") +
+      '<div class="form-actions"><button type="submit" class="btn btn-accent">Simpan sebagai ' + esc(state.me.nama) + '</button></div>' +
+      '</form>';
+  }
+
+  var columns = [
+    { key: "tanggal", label: "Tanggal" },
+    { key: "kodeBarang", label: "Kode" },
+    { key: "namaBarang", label: "Nama " + kategori, sortVal: function (r) { return barangMap[r.kodeBarang] ? barangMap[r.kodeBarang].nama : r.kodeBarang; }, render: function (r) { return esc(barangMap[r.kodeBarang] ? barangMap[r.kodeBarang].nama : r.kodeBarang); } },
+    { key: "dariLokasi", label: "Dari Lokasi" },
+    { key: "keLokasi", label: "Ke Lokasi" },
+    { key: "qty", label: "Qty", render: function (r) { return formatQty(r.qty) + " " + esc(barangMap[r.kodeBarang] ? barangMap[r.kodeBarang].satuan : ""); } }
+  ];
+  if (isAlat) columns.push({ key: "jenisMutasi", label: "Jenis Mutasi", render: function (r) { return r.jenisMutasi ? badge(esc(r.jenisMutasi), "accent") : "-"; } });
+  columns.push({ key: "noRef", label: "No. Referensi" });
+  columns.push({ key: "pic", label: "PIC" });
+  columns.push({ key: "keterangan", label: "Keterangan" });
+
+  return sectionCard(title, subtitle, right, formBlock + tableHTML(viewId, columns, dataFiltered, function (r) { return r.id; }, "Belum ada mutasi " + kategori.toLowerCase()));
+}
+
+/* ---------------- Harga Vendor ---------------- */
+function hargaVendorView() {
+  var canEdit = state.me && EDIT_PERMISSION.harga.indexOf(state.me.role) !== -1;
+  var open = !!state.openForm.harga;
+  var barangMap = {}; state.barang.forEach(function (b) { barangMap[b.kode] = b; });
+  var vendorMap = {}; state.vendor.forEach(function (v) { vendorMap[v.kode] = v; });
+
+  var minByBarang = {};
+  state.harga.forEach(function (h) {
+    var cur = minByBarang[h.kodeBarang];
+    if (cur === undefined || Number(h.harga) < cur) minByBarang[h.kodeBarang] = Number(h.harga);
+  });
+
+  var right = canEdit
+    ? '<button class="btn btn-primary" data-toggle-form="harga">' + (open ? ICONS.x : ICONS.plus) + ' ' + (open ? "Batal" : "Tambah") + '</button>'
+    : badge("Hanya lihat — perlu peran Finance/Manager untuk input", "neutral");
+
+  var formBlock = "";
+  if (open && canEdit) {
+    var draft = state.draft.harga || {};
+    var barangOptions = state.barang.map(function (b) { return '<option value="' + esc(b.kode) + '"' + (draft.kodeBarang === b.kode ? " selected" : "") + '>' + esc(b.kode) + ' — ' + esc(b.nama) + '</option>'; }).join("");
+    var vendorOptions = state.vendor.map(function (v) { return '<option value="' + esc(v.kode) + '"' + (draft.kodeVendor === v.kode ? " selected" : "") + '>' + esc(v.nama) + '</option>'; }).join("");
+    var satuan = barangMap[draft.kodeBarang] ? barangMap[draft.kodeBarang].satuan : "satuan";
+    formBlock = '<form id="form-harga" class="form-panel">' +
+      '<div class="field"><span class="field-label">Tanggal <span class="req">*</span></span><input class="input" type="date" name="tanggal" value="' + esc(draft.tanggal || todayISO()) + '"/></div>' +
+      '<div class="field"><span class="field-label">Material / Alat <span class="req">*</span></span><select class="input" name="kodeBarang"><option value="">Pilih material/alat...</option>' + barangOptions + '</select></div>' +
+      '<div class="field"><span class="field-label">Vendor <span class="req">*</span></span><select class="input" name="kodeVendor"><option value="">Pilih vendor...</option>' + vendorOptions + '</select></div>' +
+      '<div class="field"><span class="field-label">Harga per ' + esc(satuan) + ' (Rp) <span class="req">*</span></span><input class="input" type="number" min="1" name="harga" value="' + esc(draft.harga || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Keterangan</span><input class="input" name="keterangan" value="' + esc(draft.keterangan || "") + '"/></div>' +
+      (state.error.harga ? '<div class="form-error">' + esc(state.error.harga) + '</div>' : "") +
+      '<div class="form-actions"><button type="submit" class="btn btn-accent">Simpan sebagai ' + esc(state.me.nama) + '</button></div>' +
+      '</form>';
+  }
+
+  var columns = [
+    { key: "tanggal", label: "Tanggal" },
+    { key: "kodeBarang", label: "Kode" },
+    { key: "namaBarang", label: "Nama Material", sortVal: function (r) { return barangMap[r.kodeBarang] ? barangMap[r.kodeBarang].nama : r.kodeBarang; }, render: function (r) { return esc(barangMap[r.kodeBarang] ? barangMap[r.kodeBarang].nama : r.kodeBarang); } },
+    { key: "namaVendor", label: "Vendor", sortVal: function (r) { return vendorMap[r.kodeVendor] ? vendorMap[r.kodeVendor].nama : r.kodeVendor; }, render: function (r) { return esc(vendorMap[r.kodeVendor] ? vendorMap[r.kodeVendor].nama : r.kodeVendor); } },
+    { key: "harga", label: "Harga", render: function (r) { return formatRp(r.harga); } },
+    { key: "termurah", label: "Status", sortable: false, filterVal: function (r) { return Number(r.harga) === minByBarang[r.kodeBarang] ? "Termurah" : ""; }, render: function (r) { return Number(r.harga) === minByBarang[r.kodeBarang] ? badge("Termurah", "good") : ""; } },
+    { key: "pic", label: "PIC" }
+  ];
+
+  return sectionCard("Daftar Harga Vendor", "Histori harga tiap material per vendor — dipakai Perbandingan Harga untuk cari vendor termurah", right,
+    formBlock + tableHTML("harga", columns, state.harga, function (r) { return r.id; }));
+}
+
+/* ---------------- Progress Proyek (Engineering) ---------------- */
+function progressView() {
+  var canEdit = state.me && EDIT_PERMISSION.progress.indexOf(state.me.role) !== -1;
+  var open = !!state.openForm.progress;
+
+  var right = canEdit
+    ? '<button class="btn btn-primary" data-toggle-form="progress">' + (open ? ICONS.x : ICONS.plus) + ' ' + (open ? "Batal" : "Lapor Progress") + '</button>'
+    : badge("Hanya lihat — perlu peran Engineering/Manager untuk input", "neutral");
+
+  var formBlock = "";
+  if (open && canEdit) {
+    var draft = state.draft.progress || {};
+    var lokasiOptions = state.lokasi.map(function (l) {
+      return '<option value="' + esc(l.nama) + '"' + (draft.lokasiProyek === l.nama ? " selected" : "") + '>' + esc(l.nama) + '</option>';
+    }).join("");
+    formBlock = '<form id="form-progress" class="form-panel">' +
+      '<div class="field"><span class="field-label">Tanggal <span class="req">*</span></span><input class="input" type="date" name="tanggal" value="' + esc(draft.tanggal || todayISO()) + '"/></div>' +
+      '<div class="field"><span class="field-label">Lokasi Proyek <span class="req">*</span></span><select class="input" name="lokasiProyek"><option value="">Pilih proyek...</option>' + lokasiOptions + '</select></div>' +
+      '<div class="field"><span class="field-label">Persen Progress (%) <span class="req">*</span></span><input class="input" type="number" min="0" max="100" name="persenProgress" value="' + esc(draft.persenProgress || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Tahap / Milestone</span><input class="input" name="tahap" placeholder="Contoh: Struktur lantai 1 selesai" value="' + esc(draft.tahap || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Keterangan</span><input class="input" name="keterangan" value="' + esc(draft.keterangan || "") + '"/></div>' +
+      (state.error.progress ? '<div class="form-error">' + esc(state.error.progress) + '</div>' : "") +
+      '<div class="form-actions"><button type="submit" class="btn btn-accent">Simpan sebagai ' + esc(state.me.nama) + '</button></div>' +
+      '</form>';
+  }
+
+  var summaryCols = [
+    { key: "nama", label: "Proyek" },
+    { key: "progress", label: "Progress Terkini", sortable: false, filterable: false, render: function (r) { var cp = currentProgress(r.nama); return progressBarHTML(cp ? cp.persenProgress : 0); } },
+    { key: "tahap", label: "Tahap Terakhir", sortable: false, render: function (r) { var cp = currentProgress(r.nama); return esc(cp && cp.tahap ? cp.tahap : "-"); } },
+    { key: "updateTerakhir", label: "Update Terakhir", sortable: false, render: function (r) { var cp = currentProgress(r.nama); return esc(cp ? cp.tanggal : "-"); } },
+    { key: "jumlahLaporan", label: "Jml Laporan", sortable: false, filterable: false, render: function (r) { return state.progress.filter(function (p) { return p.lokasiProyek === r.nama; }).length; } }
+  ];
+
+  var historyCols = [
+    { key: "tanggal", label: "Tanggal" },
+    { key: "lokasiProyek", label: "Proyek" },
+    { key: "persenProgress", label: "Progress", render: function (r) { return formatPct(r.persenProgress); } },
+    { key: "tahap", label: "Tahap / Milestone" },
+    { key: "pic", label: "PIC" },
+    { key: "keterangan", label: "Keterangan" }
+  ];
+
+  return '' +
+    sectionCard("Progress terkini per proyek", "Diambil dari laporan terbaru tiap proyek", "",
+      tableHTML("progress-summary", summaryCols, state.lokasi, function (r) { return r.kode; })) +
+    sectionCard("Riwayat laporan progress", "Semua laporan yang pernah diinput tim Engineering", right,
+      formBlock + tableHTML("progress-history", historyCols, state.progress, function (r) { return r.id; }, "Belum ada laporan progress"));
+}
+
+/* ---------------- Anggaran Proyek (Engineering input, khusus Manager & Engineering) ---------------- */
+function anggaranView() {
+  var canEdit = state.me && EDIT_PERMISSION.anggaran.indexOf(state.me.role) !== -1;
+  var open = !!state.openForm.anggaran;
+
+  var right = canEdit
+    ? '<button class="btn btn-primary" data-toggle-form="anggaran">' + (open ? ICONS.x : ICONS.plus) + ' ' + (open ? "Batal" : "Input Anggaran") + '</button>'
+    : badge("Hanya lihat — perlu peran Engineering/Manager untuk input", "neutral");
+
+  var formBlock = "";
+  if (open && canEdit) {
+    var draft = state.draft.anggaran || {};
+    var lokasiOptions = state.lokasi.map(function (l) {
+      return '<option value="' + esc(l.nama) + '"' + (draft.lokasiProyek === l.nama ? " selected" : "") + '>' + esc(l.nama) + '</option>';
+    }).join("");
+    formBlock = '<form id="form-anggaran" class="form-panel">' +
+      '<div class="field"><span class="field-label">Tanggal <span class="req">*</span></span><input class="input" type="date" name="tanggal" value="' + esc(draft.tanggal || todayISO()) + '"/></div>' +
+      '<div class="field"><span class="field-label">Lokasi Proyek <span class="req">*</span></span><select class="input" name="lokasiProyek"><option value="">Pilih proyek...</option>' + lokasiOptions + '</select></div>' +
+      '<div class="field"><span class="field-label">Anggaran Total (Rp) <span class="req">*</span></span><input class="input" type="number" min="1" name="anggaranTotal" value="' + esc(draft.anggaranTotal || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Keterangan</span><input class="input" name="keterangan" placeholder="Contoh: revisi anggaran, kontrak awal..." value="' + esc(draft.keterangan || "") + '"/></div>' +
+      '<div class="form-hint">Hanya Manager &amp; Engineering yang bisa melihat halaman ini.</div>' +
+      (state.error.anggaran ? '<div class="form-error">' + esc(state.error.anggaran) + '</div>' : "") +
+      '<div class="form-actions"><button type="submit" class="btn btn-accent">Simpan sebagai ' + esc(state.me.nama) + '</button></div>' +
+      '</form>';
+  }
+
+  var summaryCols = [
+    { key: "nama", label: "Proyek" },
+    { key: "anggaran", label: "Anggaran Terkini", sortable: false, render: function (r) { var ca = currentAnggaran(r.nama); return ca ? '<b>' + formatRp(ca.anggaranTotal) + '</b>' : "-"; } },
+    { key: "updateTerakhir", label: "Update Terakhir", sortable: false, render: function (r) { var ca = currentAnggaran(r.nama); return esc(ca ? ca.tanggal : "-"); } }
+  ];
+
+  var historyCols = [
+    { key: "tanggal", label: "Tanggal" },
+    { key: "lokasiProyek", label: "Proyek" },
+    { key: "anggaranTotal", label: "Anggaran Total", render: function (r) { return formatRp(r.anggaranTotal); } },
+    { key: "pic", label: "PIC" },
+    { key: "keterangan", label: "Keterangan" }
+  ];
+
+  return '' +
+    sectionCard("Anggaran terkini per proyek", "Khusus Manager & Engineering", "",
+      tableHTML("anggaran-summary", summaryCols, state.lokasi, function (r) { return r.kode; })) +
+    sectionCard("Riwayat input anggaran", "Setiap revisi anggaran tersimpan sebagai baris baru", right,
+      formBlock + tableHTML("anggaran-history", historyCols, state.anggaran, function (r) { return r.id; }, "Belum ada data anggaran"));
+}
+
+/* ---------------- Skema Pembayaran / Termin (Finance) ---------------- */
+function terminView() {
+  var canEdit = state.me && EDIT_PERMISSION.termin.indexOf(state.me.role) !== -1;
+  var open = !!state.openForm.termin;
+
+  var right = canEdit
+    ? '<button class="btn btn-primary" data-toggle-form="termin">' + (open ? ICONS.x : ICONS.plus) + ' ' + (open ? "Batal" : "Tambah Termin") + '</button>'
+    : badge("Hanya lihat — perlu peran Finance/Manager untuk input", "neutral");
+
+  var formBlock = "";
+  if (open && canEdit) {
+    var draft = state.draft.termin || {};
+    var lokasiOptions = state.lokasi.map(function (l) {
+      return '<option value="' + esc(l.nama) + '"' + (draft.lokasiProyek === l.nama ? " selected" : "") + '>' + esc(l.nama) + '</option>';
+    }).join("");
+    formBlock = '<form id="form-termin" class="form-panel">' +
+      '<div class="field"><span class="field-label">Lokasi Proyek <span class="req">*</span></span><select class="input" name="lokasiProyek"><option value="">Pilih proyek...</option>' + lokasiOptions + '</select></div>' +
+      '<div class="field"><span class="field-label">Nama Termin <span class="req">*</span></span><input class="input" name="namaTermin" placeholder="Contoh: DP, Termin 2..." value="' + esc(draft.namaTermin || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Persen Pembayaran (%) <span class="req">*</span></span><input class="input" type="number" min="1" max="100" name="persenPembayaran" value="' + esc(draft.persenPembayaran || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Ambang Progress (%) <span class="req">*</span></span><input class="input" type="number" min="0" max="100" name="progressMinimum" value="' + esc(draft.progressMinimum || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Keterangan</span><input class="input" name="keterangan" value="' + esc(draft.keterangan || "") + '"/></div>' +
+      '<div class="form-hint">Ambang Progress = persen progress lapangan minimum supaya termin ini "tercapai" dan Manager mendapat notice untuk menghubungi klien.</div>' +
+      (state.error.termin ? '<div class="form-error">' + esc(state.error.termin) + '</div>' : "") +
+      '<div class="form-actions"><button type="submit" class="btn btn-accent">Simpan sebagai ' + esc(state.me.nama) + '</button></div>' +
+      '</form>';
+  }
+
+  var summaryCols = [
+    { key: "nama", label: "Proyek" },
+    { key: "progress", label: "Progress Terkini", sortable: false, filterable: false, render: function (r) { var cp = currentProgress(r.nama); return progressBarHTML(cp ? cp.persenProgress : 0); } },
+    { key: "jumlahTermin", label: "Jml Termin", sortable: false, filterable: false, render: function (r) { return state.termin.filter(function (t) { return t.lokasiProyek === r.nama; }).length; } },
+    { key: "totalPersen", label: "Total % Termin", sortable: false, filterable: false, render: function (r) {
+        var total = state.termin.filter(function (t) { return t.lokasiProyek === r.nama; }).reduce(function (s, t) { return s + Number(t.persenPembayaran || 0); }, 0);
+        return total === 100 ? badge(total + "% ✓", "good") : badge(total + "%", total > 100 ? "warn" : "neutral");
+      } },
+    { key: "perluDitagih", label: "Perlu Ditagih", sortable: false, filterable: false, render: function (r) {
+        var n = state.termin.filter(function (t) { return t.lokasiProyek === r.nama && terminStatus(t) === "due"; }).length;
+        return n ? badge(ICONS.bell + " " + n, "warn") : badge("0", "good");
+      } },
+    { key: "menungguBayar", label: "Menunggu Bayar", sortable: false, filterable: false, render: function (r) {
+        var n = state.termin.filter(function (t) { return t.lokasiProyek === r.nama && terminStatus(t) === "ditagih"; }).length;
+        return n ? badge(n + " termin", "accent") : badge("0", "good");
+      } }
+  ];
+
+  var canToggle = canEdit;
+  var terminCols = [
+    { key: "lokasiProyek", label: "Proyek" },
+    { key: "namaTermin", label: "Nama Termin" },
+    { key: "persenPembayaran", label: "Persen Pembayaran", render: function (r) { return formatPct(r.persenPembayaran); } },
+    { key: "progressMinimum", label: "Ambang Progress", render: function (r) { return formatPct(r.progressMinimum); } },
+    { key: "progressSaatIni", label: "Progress Saat Ini", sortable: false, filterable: false, render: function (r) { var cp = currentProgress(r.lokasiProyek); return formatPct(cp ? cp.persenProgress : 0); } },
+    { key: "status", label: "Status", sortable: false,
+      filterVal: function (r) {
+        var s = terminStatus(r);
+        return s === "lunas" ? "Lunas Sudah Terbayar" : (s === "ditagih" ? "Sudah Ditagih Menunggu Bayar" : (s === "due" ? "Tercapai Perlu Ditagih" : "Belum Tercapai"));
+      },
+      render: function (r) {
+        var s = terminStatus(r);
+        if (s === "lunas") return badge(ICONS.check + " Lunas", "good");
+        if (s === "ditagih") return badge("Sudah Ditagih - Menunggu Bayar", "accent");
+        if (s === "due") return badge(ICONS.bell + " Tercapai - Hubungi Klien", "warn");
+        return badge("Belum Tercapai", "neutral");
+      } },
+    { key: "aksi", label: "", sortable: false, filterable: false, render: function (r) {
+        if (!canToggle) return "";
+        var s = terminStatus(r);
+        if (s === "pending" || s === "due") {
+          return '<button type="button" class="btn btn-outline btn-sm" data-toggle-tagih="' + r.id + '">Tandai Sudah Ditagih</button>';
+        }
+        if (s === "ditagih") {
+          return '<button type="button" class="btn btn-accent btn-sm" data-toggle-bayar="' + r.id + '">Tandai Sudah Terbayar</button> ' +
+            '<button type="button" class="btn btn-outline btn-sm" data-toggle-tagih="' + r.id + '">Batalkan Ditagih</button>';
+        }
+        return '<button type="button" class="btn btn-outline btn-sm" data-toggle-bayar="' + r.id + '">Batalkan Terbayar</button>';
+      } },
+    { key: "keterangan", label: "Keterangan" }
+  ];
+
+  return '' +
+    sectionCard("Ringkasan skema pembayaran per proyek", "Total persentase termin idealnya 100% dari nilai kontrak", "",
+      tableHTML("termin-summary", summaryCols, state.lokasi, function (r) { return r.kode; })) +
+    sectionCard("Skema termin &amp; status penagihan", "Status otomatis mengikuti laporan Progress Proyek dari Engineering", right,
+      formBlock + tableHTML("termin-list", terminCols, state.termin, function (r) { return r.id; }, "Belum ada skema termin"));
+}
+
+/* ---------------- Addendum / Pekerjaan Tambah (Engineering, Finance & Manager) ---------------- */
+function addendumView() {
+  var canEdit = state.me && EDIT_PERMISSION.addendum.indexOf(state.me.role) !== -1;
+  var open = !!state.openForm.addendum;
+  var barangMap = {}; state.barang.forEach(function (b) { barangMap[b.kode] = b; });
+
+  var right = canEdit
+    ? '<button class="btn btn-primary" data-toggle-form="addendum">' + (open ? ICONS.x : ICONS.plus) + ' ' + (open ? "Batal" : "Tambah Addendum") + '</button>'
+    : badge("Hanya lihat — perlu peran Finance/Engineering/Manager", "neutral");
+
+  var formBlock = "";
+  if (open && canEdit) {
+    var draft = state.draft.addendum || {};
+    var lokasiOptions = state.lokasi.map(function (l) {
+      return '<option value="' + esc(l.nama) + '"' + (draft.lokasiProyek === l.nama ? " selected" : "") + '>' + esc(l.nama) + '</option>';
+    }).join("");
+    var barangOptions = state.barang.map(function (b) {
+      return '<option value="' + esc(b.kode) + '"' + (draft.kodeBarang === b.kode ? " selected" : "") + '>' + esc(b.kode) + ' — ' + esc(b.nama) + '</option>';
+    }).join("");
+    var satuan = barangMap[draft.kodeBarang] ? barangMap[draft.kodeBarang].satuan : "satuan";
+    formBlock = '<form id="form-addendum" class="form-panel">' +
+      '<div class="field"><span class="field-label">Tanggal <span class="req">*</span></span><input class="input" type="date" name="tanggal" value="' + esc(draft.tanggal || todayISO()) + '"/></div>' +
+      '<div class="field"><span class="field-label">Lokasi Proyek <span class="req">*</span></span><select class="input" name="lokasiProyek"><option value="">Pilih proyek...</option>' + lokasiOptions + '</select></div>' +
+      '<div class="field"><span class="field-label">Deskripsi Pekerjaan Tambah <span class="req">*</span></span><input class="input" name="deskripsiPekerjaan" placeholder="Contoh: Penambahan carport" value="' + esc(draft.deskripsiPekerjaan || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Material Terpakai</span><select class="input" name="kodeBarang"><option value="">Pilih material/alat (opsional)...</option>' + barangOptions + '</select></div>' +
+      '<div class="field"><span class="field-label">Jumlah Material (' + esc(satuan) + ')</span><input class="input" type="number" min="0" name="qtyMaterial" value="' + esc(draft.qtyMaterial || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Nilai Addendum (Rp) <span class="req">*</span></span><input class="input" type="number" min="1" name="nilaiAddendum" value="' + esc(draft.nilaiAddendum || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Keterangan</span><input class="input" name="keterangan" value="' + esc(draft.keterangan || "") + '"/></div>' +
+      (state.error.addendum ? '<div class="form-error">' + esc(state.error.addendum) + '</div>' : "") +
+      '<div class="form-actions"><button type="submit" class="btn btn-accent">Simpan sebagai ' + esc(state.me.nama) + '</button></div>' +
+      '</form>';
+  }
+
+  var canToggle = canEdit;
+  var columns = [
+    { key: "tanggal", label: "Tanggal" },
+    { key: "lokasiProyek", label: "Proyek" },
+    { key: "deskripsiPekerjaan", label: "Deskripsi Pekerjaan" },
+    { key: "namaBarang", label: "Material Terpakai", sortVal: function (r) { return r.kodeBarang && barangMap[r.kodeBarang] ? barangMap[r.kodeBarang].nama : ""; }, render: function (r) { return r.kodeBarang && barangMap[r.kodeBarang] ? esc(barangMap[r.kodeBarang].nama) : "-"; } },
+    { key: "qtyMaterial", label: "Jumlah Material", render: function (r) { return r.qtyMaterial ? formatQty(r.qtyMaterial) + " " + esc(barangMap[r.kodeBarang] ? barangMap[r.kodeBarang].satuan : "") : "-"; } },
+    { key: "nilaiAddendum", label: "Nilai Addendum", render: function (r) { return formatRp(r.nilaiAddendum); } },
+    { key: "status", label: "Status Pembayaran", sortable: false, filterVal: function (r) { return r.sudahTerbayar ? "Sudah Terbayar" : "Belum Terbayar"; },
+      render: function (r) { return r.sudahTerbayar ? badge(ICONS.check + " Sudah Terbayar", "good") : badge("Belum Terbayar", "warn"); } },
+    { key: "aksi", label: "", sortable: false, filterable: false, render: function (r) {
+        if (!canToggle) return "";
+        return '<button type="button" class="btn btn-outline btn-sm" data-toggle-addendum-bayar="' + r.id + '">' + (r.sudahTerbayar ? "Tandai Belum Terbayar" : "Tandai Sudah Terbayar") + '</button>';
+      } },
+    { key: "pic", label: "PIC" },
+    { key: "keterangan", label: "Keterangan" }
+  ];
+
+  return sectionCard("Addendum / pekerjaan tambah", "Hanya bisa dilihat & diedit oleh Engineering, Finance, dan Manager", right,
+    formBlock + tableHTML("addendum", columns, state.addendum, function (r) { return r.id; }, "Belum ada addendum"));
+}
+
+/* ---------------- Master Material & Alat ---------------- */
+function masterBarangView() {
+  var canEdit = state.me && EDIT_PERMISSION.barang.indexOf(state.me.role) !== -1;
+  var open = !!state.openForm.barang;
+  var right = canEdit
+    ? '<button class="btn btn-primary" data-toggle-form="barang">' + (open ? ICONS.x : ICONS.plus) + ' ' + (open ? "Batal" : "Tambah Material/Alat") + '</button>'
+    : badge("Hanya lihat — perlu peran Logistik/Manager untuk edit", "neutral");
+
+  var formBlock = "";
+  if (open && canEdit) {
+    var draft = state.draft.barang || {};
+    formBlock = '<form id="form-barang" class="form-panel">' +
+      '<div class="field"><span class="field-label">Nama Material/Alat <span class="req">*</span></span><input class="input" name="nama" value="' + esc(draft.nama || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Kategori <span class="req">*</span></span><select class="input" name="kategori">' +
+      '<option value="Material"' + (draft.kategori === "Alat" ? "" : " selected") + '>Material</option>' +
+      '<option value="Alat"' + (draft.kategori === "Alat" ? " selected" : "") + '>Alat</option></select></div>' +
+      '<div class="field"><span class="field-label">Satuan <span class="req">*</span></span><input class="input" name="satuan" placeholder="Sak, M3, Unit..." value="' + esc(draft.satuan || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Stok Minimum</span><input class="input" type="number" min="0" name="stokMin" value="' + esc(draft.stokMin || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Keterangan</span><input class="input" name="keterangan" value="' + esc(draft.keterangan || "") + '"/></div>' +
+      (state.error.barang ? '<div class="form-error">' + esc(state.error.barang) + '</div>' : "") +
+      '<div class="form-actions"><button type="submit" class="btn btn-accent">Simpan Material/Alat</button></div>' +
+      '</form>';
+  }
+
+  var columns = [
+    { key: "kode", label: "Kode" },
+    { key: "nama", label: "Nama Material/Alat" },
+    { key: "kategori", label: "Kategori", render: function (r) { return badge(esc(r.kategori), r.kategori === "Alat" ? "accent" : "neutral"); } },
+    { key: "satuan", label: "Satuan" },
+    { key: "stokMin", label: "Stok Minimum", render: function (r) { return formatQty(r.stokMin); } },
+    { key: "keterangan", label: "Keterangan" }
+  ];
+  return sectionCard("Master Material &amp; Alat", "Daftar induk — jadi acuan dropdown di semua sheet input", right,
+    formBlock + tableHTML("barang", columns, state.barang, function (r) { return r.kode; }));
+}
+
+/* ---------------- Master Lokasi ---------------- */
+function masterLokasiView() {
+  var canEdit = state.me && EDIT_PERMISSION.lokasi.indexOf(state.me.role) !== -1;
+  var open = !!state.openForm.lokasi;
+  var right = canEdit
+    ? '<button class="btn btn-primary" data-toggle-form="lokasi">' + (open ? ICONS.x : ICONS.plus) + ' ' + (open ? "Batal" : "Tambah Lokasi") + '</button>'
+    : badge("Hanya lihat — perlu peran Engineering/Manager untuk edit", "neutral");
+
+  var formBlock = "";
+  if (open && canEdit) {
+    var draft = state.draft.lokasi || {};
+    formBlock = '<form id="form-lokasi" class="form-panel">' +
+      '<div class="field"><span class="field-label">Nama Lokasi/Proyek <span class="req">*</span></span><input class="input" name="nama" value="' + esc(draft.nama || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">PIC Proyek</span><input class="input" name="pic" value="' + esc(draft.pic || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Status</span><select class="input" name="status">' +
+      '<option value="Aktif"' + (draft.status === "Selesai" ? "" : " selected") + '>Aktif</option>' +
+      '<option value="Selesai"' + (draft.status === "Selesai" ? " selected" : "") + '>Selesai</option></select></div>' +
+      (state.error.lokasi ? '<div class="form-error">' + esc(state.error.lokasi) + '</div>' : "") +
+      '<div class="form-actions"><button type="submit" class="btn btn-accent">Simpan Lokasi</button></div>' +
+      '</form>';
+  }
+
+  var columns = [
+    { key: "kode", label: "Kode" },
+    { key: "nama", label: "Nama Lokasi/Proyek" },
+    { key: "pic", label: "PIC" },
+    { key: "status", label: "Status", render: function (r) { return badge(esc(r.status), r.status === "Aktif" ? "good" : "neutral"); } }
+  ];
+  return sectionCard("Master Lokasi Proyek", "Dipakai sebagai acuan lokasi di Material Masuk/Keluar, Mutasi, Progress, Termin &amp; kolom matrix Stok", right,
+    formBlock + tableHTML("lokasi", columns, state.lokasi, function (r) { return r.kode; }));
+}
+
+/* ---------------- Master Vendor ---------------- */
+function masterVendorView() {
+  var canEdit = state.me && EDIT_PERMISSION.vendor.indexOf(state.me.role) !== -1;
+  var open = !!state.openForm.vendor;
+  var right = canEdit
+    ? '<button class="btn btn-primary" data-toggle-form="vendor">' + (open ? ICONS.x : ICONS.plus) + ' ' + (open ? "Batal" : "Tambah Vendor") + '</button>'
+    : badge("Hanya lihat — perlu peran Engineering/Logistik/Manager untuk edit", "neutral");
+
+  var formBlock = "";
+  if (open && canEdit) {
+    var draft = state.draft.vendor || {};
+    formBlock = '<form id="form-vendor" class="form-panel">' +
+      '<div class="field"><span class="field-label">Nama Toko/Vendor <span class="req">*</span></span><input class="input" name="nama" value="' + esc(draft.nama || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">PIC/Kontak</span><input class="input" name="pic" value="' + esc(draft.pic || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">No. Telepon</span><input class="input" name="telp" value="' + esc(draft.telp || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Alamat</span><input class="input" name="alamat" value="' + esc(draft.alamat || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Kategori Material Dijual</span><input class="input" name="kategori" placeholder="Semen, Besi..." value="' + esc(draft.kategori || "") + '"/></div>' +
+      '<div class="field"><span class="field-label">Rating (1-5)</span><input class="input" type="number" min="1" max="5" name="rating" value="' + esc(draft.rating || 3) + '"/></div>' +
+      (state.error.vendor ? '<div class="form-error">' + esc(state.error.vendor) + '</div>' : "") +
+      '<div class="form-actions"><button type="submit" class="btn btn-accent">Simpan Vendor</button></div>' +
+      '</form>';
+  }
+
+  var columns = [
+    { key: "kode", label: "Kode" },
+    { key: "nama", label: "Nama Vendor" },
+    { key: "pic", label: "PIC" },
+    { key: "telp", label: "Telepon" },
+    { key: "kategori", label: "Kategori" },
+    { key: "rating", label: "Rating", render: function (r) { return "★".repeat(Number(r.rating || 0)); } }
+  ];
+  return sectionCard("Master Vendor", "Daftar toko/supplier — jadi acuan dropdown di Daftar Harga Vendor", right,
+    formBlock + tableHTML("vendor", columns, state.vendor, function (r) { return r.kode; }));
+}
+
+/* ============================================================
+   Event delegation (attached once)
+   ============================================================ */
+var PREPEND_SECTIONS = { masuk: 1, keluar: 1, mutasi: 1, harga: 1, progress: 1, anggaran: 1, addendum: 1 };
+
+function addRow(section, item, viewId) {
+  state.saving = true;
+  renderApp();
+  return insertRow(section, item).then(function (saved) {
+    state[section] = PREPEND_SECTIONS[section] ? [saved].concat(state[section]) : state[section].concat([saved]);
+    state.error[viewId] = "";
+    state.draft[viewId] = {};
+    state.openForm[viewId] = false;
+    state.saving = false;
+    renderApp();
+  }).catch(function (err) {
+    state.saving = false;
+    state.error[viewId] = "Gagal menyimpan ke database: " + (err && err.message ? err.message : String(err));
+    renderApp();
+  });
+}
+
+function patchRow(section, keyCol, keyVal, patch) {
+  state.saving = true;
+  renderApp();
+  return updateRow(section, keyCol, keyVal, patch).then(function (saved) {
+    state[section] = state[section].map(function (r) { return r[keyCol] === keyVal ? saved : r; });
+    state.saving = false;
+    renderApp();
+  }).catch(function (err) {
+    state.saving = false;
+    renderApp();
+    alert("Gagal mengubah data: " + (err && err.message ? err.message : String(err)));
+  });
+}
+
+function readForm(form) {
+  var out = {};
+  Array.prototype.forEach.call(form.elements, function (el) {
+    if (el.name) out[el.name] = el.value;
+  });
+  return out;
+}
+
+function onSubmit(e) {
+  var form = e.target;
+  if (!form || !form.id) return;
+  e.preventDefault();
+
+  if (form.id === "form-login") {
+    var vals = readForm(form);
+    var username = (vals.username || "").trim().toLowerCase();
+    var password = vals.password || "";
+    if (!username || !password) {
+      state.loginError = "Isi username dan password dulu ya.";
+      state.draft.login = { username: username };
+      renderApp();
+      return;
+    }
+    var email = username.indexOf("@") !== -1 ? username : username + "@" + LOGIN_DOMAIN;
+    state.loginError = "";
+    state.entering = true;
+    renderApp();
+    supabase.auth.signInWithPassword({ email: email, password: password }).then(function (res) {
+      if (res.error) throw new Error("Username atau password salah.");
+      return enterApp(res.data.user);
+    }).catch(function (err) {
+      state.entering = false;
+      state.loginError = err.message || "Gagal masuk. Coba lagi.";
+      renderApp();
+    });
+    return;
+  }
+
+  if (form.id === "form-masuk" || form.id === "form-keluar") {
+    var jenis = form.id === "form-masuk" ? "masuk" : "keluar";
+    var v = readForm(form);
+    if (!v.kodeBarang || !v.lokasi || !v.qty || Number(v.qty) <= 0) {
+      state.error[jenis] = "Lengkapi material/alat, lokasi, dan qty (harus lebih dari 0).";
+      state.draft[jenis] = v;
+      renderApp();
+      return;
+    }
+    var item = { tanggal: v.tanggal || todayISO(), kodeBarang: v.kodeBarang, lokasi: v.lokasi, qty: Number(v.qty), noRef: v.noRef || "", pic: state.me.nama, keterangan: v.keterangan || "" };
+    if (jenis === "masuk") item.dari = v.dari || "";
+    addRow(jenis, item, jenis);
+    return;
+  }
+
+  if (form.id === "form-mutasiMaterial" || form.id === "form-mutasiAlat") {
+    var viewId = form.id === "form-mutasiMaterial" ? "mutasiMaterial" : "mutasiAlat";
+    var vm = readForm(form);
+    if (!vm.kodeBarang || !vm.dariLokasi || !vm.keLokasi || !vm.qty || Number(vm.qty) <= 0) {
+      state.error[viewId] = "Lengkapi item, lokasi asal, lokasi tujuan, dan qty (harus lebih dari 0).";
+      state.draft[viewId] = vm;
+      renderApp();
+      return;
+    }
+    if (vm.dariLokasi === vm.keLokasi) {
+      state.error[viewId] = "Lokasi asal dan tujuan tidak boleh sama.";
+      state.draft[viewId] = vm;
+      renderApp();
+      return;
+    }
+    var mItem = { tanggal: vm.tanggal || todayISO(), kodeBarang: vm.kodeBarang, dariLokasi: vm.dariLokasi, keLokasi: vm.keLokasi, qty: Number(vm.qty), jenisMutasi: vm.jenisMutasi || "", noRef: vm.noRef || "", pic: state.me.nama, keterangan: vm.keterangan || "" };
+    addRow("mutasi", mItem, viewId);
+    return;
+  }
+
+  if (form.id === "form-harga") {
+    var vh = readForm(form);
+    if (!vh.kodeBarang || !vh.kodeVendor || !vh.harga || Number(vh.harga) <= 0) {
+      state.error.harga = "Lengkapi material, vendor, dan harga (harus lebih dari 0).";
+      state.draft.harga = vh;
+      renderApp();
+      return;
+    }
+    var hItem = { tanggal: vh.tanggal || todayISO(), kodeBarang: vh.kodeBarang, kodeVendor: vh.kodeVendor, harga: Number(vh.harga), pic: state.me.nama, keterangan: vh.keterangan || "" };
+    addRow("harga", hItem, "harga");
+    return;
+  }
+
+  if (form.id === "form-progress") {
+    var vp = readForm(form);
+    if (!vp.lokasiProyek || vp.persenProgress === "" || Number(vp.persenProgress) < 0 || Number(vp.persenProgress) > 100) {
+      state.error.progress = "Lengkapi proyek dan persen progress (0-100).";
+      state.draft.progress = vp;
+      renderApp();
+      return;
+    }
+    var pItem = { tanggal: vp.tanggal || todayISO(), lokasiProyek: vp.lokasiProyek, persenProgress: Number(vp.persenProgress), tahap: vp.tahap || "", pic: state.me.nama, keterangan: vp.keterangan || "" };
+    addRow("progress", pItem, "progress");
+    return;
+  }
+
+  if (form.id === "form-termin") {
+    var vt = readForm(form);
+    if (!vt.lokasiProyek || !vt.namaTermin || !vt.namaTermin.trim() || !vt.persenPembayaran || Number(vt.persenPembayaran) <= 0 || vt.progressMinimum === "" || Number(vt.progressMinimum) < 0 || Number(vt.progressMinimum) > 100) {
+      state.error.termin = "Lengkapi proyek, nama termin, persen pembayaran (>0), dan ambang progress (0-100).";
+      state.draft.termin = vt;
+      renderApp();
+      return;
+    }
+    var tItem = { lokasiProyek: vt.lokasiProyek, namaTermin: vt.namaTermin.trim(), persenPembayaran: Number(vt.persenPembayaran), progressMinimum: Number(vt.progressMinimum), sudahDitagih: false, sudahTerbayar: false, pic: state.me.nama, keterangan: vt.keterangan || "" };
+    addRow("termin", tItem, "termin");
+    return;
+  }
+
+  if (form.id === "form-anggaran") {
+    var va = readForm(form);
+    if (!va.lokasiProyek || !va.anggaranTotal || Number(va.anggaranTotal) <= 0) {
+      state.error.anggaran = "Lengkapi proyek dan anggaran total (harus lebih dari 0).";
+      state.draft.anggaran = va;
+      renderApp();
+      return;
+    }
+    var aItem = { tanggal: va.tanggal || todayISO(), lokasiProyek: va.lokasiProyek, anggaranTotal: Number(va.anggaranTotal), pic: state.me.nama, keterangan: va.keterangan || "" };
+    addRow("anggaran", aItem, "anggaran");
+    return;
+  }
+
+  if (form.id === "form-addendum") {
+    var vad = readForm(form);
+    if (!vad.lokasiProyek || !vad.deskripsiPekerjaan || !vad.deskripsiPekerjaan.trim() || !vad.nilaiAddendum || Number(vad.nilaiAddendum) <= 0) {
+      state.error.addendum = "Lengkapi proyek, deskripsi pekerjaan, dan nilai addendum (harus lebih dari 0).";
+      state.draft.addendum = vad;
+      renderApp();
+      return;
+    }
+    var adItem = {
+      tanggal: vad.tanggal || todayISO(), lokasiProyek: vad.lokasiProyek,
+      deskripsiPekerjaan: vad.deskripsiPekerjaan.trim(), kodeBarang: vad.kodeBarang || null,
+      qtyMaterial: vad.qtyMaterial ? Number(vad.qtyMaterial) : 0, nilaiAddendum: Number(vad.nilaiAddendum),
+      sudahTerbayar: false, pic: state.me.nama, keterangan: vad.keterangan || ""
+    };
+    addRow("addendum", adItem, "addendum");
+    return;
+  }
+
+  if (form.id === "form-barang") {
+    var vb = readForm(form);
+    if (!vb.nama || !vb.nama.trim() || !vb.satuan || !vb.satuan.trim()) {
+      state.error.barang = "Nama material/alat dan satuan wajib diisi.";
+      state.draft.barang = vb;
+      renderApp();
+      return;
+    }
+    var kodeB = nextCode(state.barang, vb.kategori === "Alat" ? "ALT" : "MAT");
+    var bItem = { kode: kodeB, nama: vb.nama.trim(), kategori: vb.kategori, satuan: vb.satuan.trim(), stokMin: Number(vb.stokMin || 0), keterangan: vb.keterangan || "" };
+    addRow("barang", bItem, "barang");
+    return;
+  }
+
+  if (form.id === "form-lokasi") {
+    var vl = readForm(form);
+    if (!vl.nama || !vl.nama.trim()) {
+      state.error.lokasi = "Nama lokasi/proyek wajib diisi.";
+      state.draft.lokasi = vl;
+      renderApp();
+      return;
+    }
+    var kodeL = nextCode(state.lokasi, "LOK");
+    var lItem = { kode: kodeL, nama: vl.nama.trim(), pic: vl.pic || "", status: vl.status || "Aktif" };
+    addRow("lokasi", lItem, "lokasi");
+    return;
+  }
+
+  if (form.id === "form-vendor") {
+    var vv = readForm(form);
+    if (!vv.nama || !vv.nama.trim()) {
+      state.error.vendor = "Nama vendor wajib diisi.";
+      state.draft.vendor = vv;
+      renderApp();
+      return;
+    }
+    var kodeV = nextCode(state.vendor, "VND");
+    var vItem = { kode: kodeV, nama: vv.nama.trim(), pic: vv.pic || "", telp: vv.telp || "", alamat: vv.alamat || "", kategori: vv.kategori || "", rating: Number(vv.rating || 3) };
+    addRow("vendor", vItem, "vendor");
+    return;
+  }
+}
+
+function onClick(e) {
+  var navBtn = e.target.closest("[data-nav]");
+  if (navBtn) { state.tab = navBtn.getAttribute("data-nav"); renderApp(); return; }
+
+  var toggleBtn = e.target.closest("[data-toggle-form]");
+  if (toggleBtn) {
+    var v2 = toggleBtn.getAttribute("data-toggle-form");
+    state.openForm[v2] = !state.openForm[v2];
+    if (!state.openForm[v2]) { state.error[v2] = ""; }
+    renderApp();
+    return;
+  }
+
+  var tagihBtn = e.target.closest("[data-toggle-tagih]");
+  if (tagihBtn) {
+    var tid2 = tagihBtn.getAttribute("data-toggle-tagih");
+    var rowT = state.termin.filter(function (t) { return t.id === tid2; })[0];
+    if (!rowT) return;
+    var nextDitagih = !rowT.sudahDitagih;
+    var patchT = { sudahDitagih: nextDitagih };
+    if (!nextDitagih) patchT.sudahTerbayar = false; // batal ditagih -> otomatis batal terbayar juga
+    patchRow("termin", "id", tid2, patchT);
+    return;
+  }
+
+  var bayarBtn = e.target.closest("[data-toggle-bayar]");
+  if (bayarBtn) {
+    var tid3 = bayarBtn.getAttribute("data-toggle-bayar");
+    var rowT2 = state.termin.filter(function (t) { return t.id === tid3; })[0];
+    if (!rowT2) return;
+    var nextTerbayar = !rowT2.sudahTerbayar;
+    var patchT2 = { sudahTerbayar: nextTerbayar };
+    if (nextTerbayar) patchT2.sudahDitagih = true; // terbayar otomatis berarti sudah ditagih
+    patchRow("termin", "id", tid3, patchT2);
+    return;
+  }
+
+  var addendumBayarBtn = e.target.closest("[data-toggle-addendum-bayar]");
+  if (addendumBayarBtn) {
+    var aid = addendumBayarBtn.getAttribute("data-toggle-addendum-bayar");
+    var rowA = state.addendum.filter(function (a) { return a.id === aid; })[0];
+    if (!rowA) return;
+    patchRow("addendum", "id", aid, { sudahTerbayar: !rowA.sudahTerbayar });
+    return;
+  }
+
+  var clearBtn = e.target.closest("[data-clear-filter]");
+  if (clearBtn) {
+    var ctid = clearBtn.getAttribute("data-clear-filter");
+    state.filter[ctid] = {};
+    renderTableWrap(ctid);
+    return;
+  }
+
+  var sortTh = e.target.closest("[data-sort-table]");
+  if (sortTh) {
+    var tid = sortTh.getAttribute("data-sort-table");
+    var key = sortTh.getAttribute("data-sort-key");
+    var cur = state.sort[tid];
+    if (cur && cur.key === key) {
+      state.sort[tid] = { key: key, dir: cur.dir === "asc" ? "desc" : "asc" };
+    } else {
+      state.sort[tid] = { key: key, dir: "asc" };
+    }
+    renderTableWrap(tid);
+    return;
+  }
+
+  var logoutBtn = e.target.closest("[data-action='logout']");
+  if (logoutBtn) {
+    unsubscribeRealtime();
+    supabase.auth.signOut().then(function () {
+      state.me = null;
+      state.tab = "dashboard";
+      renderApp();
+    });
+    return;
+  }
+}
+
+function onInput(e) {
+  var fInput = e.target.closest("[data-filter-table]");
+  if (fInput) {
+    var tid = fInput.getAttribute("data-filter-table");
+    var key = fInput.getAttribute("data-filter-col");
+    setFilter(tid, key, fInput.value);
+    updateTbodyOnly(tid);
+  }
+}
+
+/* ============================================================
+   Bootstrap (Supabase Auth + data loading + realtime)
+   ============================================================ */
+var realtimeChannels = [];
+
+function loadAllTables() {
+  var keys = Object.keys(TABLES);
+  return Promise.all(keys.map(function (k) { return fetchTable(k); })).then(function (results) {
+    keys.forEach(function (k, i) { state[k] = results[i]; });
+  });
+}
+
+/* setelah login berhasil (atau session lama masih aktif): ambil profil (nama+role),
+   muat semua tabel, lalu nyalakan realtime supaya perubahan dari anggota tim lain
+   langsung muncul tanpa perlu refresh */
+function enterApp(user) {
+  return supabase.from("profiles").select("*").eq("id", user.id).single().then(function (res) {
+    if (res.error || !res.data) {
+      throw new Error("Profil belum diatur untuk akun ini. Minta admin melengkapi tabel profiles (lihat SETUP.md).");
+    }
+    state.me = { id: user.id, nama: res.data.nama, role: res.data.role };
+    return loadAllTables();
+  }).then(function () {
+    subscribeRealtime();
+    state.entering = false;
+    state.ready = true;
+    renderApp();
+  });
+}
+
+/* setiap ada perubahan (insert/update/delete) di tabel manapun oleh siapa pun,
+   ambil ulang tabel itu dan render ulang -- ini yang membuat data tersinkron
+   real-time ke semua anggota tim yang sedang membuka aplikasi */
+function subscribeRealtime() {
+  Object.keys(TABLES).forEach(function (key) {
+    var ch = supabase.channel("realtime-" + TABLES[key])
+      .on("postgres_changes", { event: "*", schema: "public", table: TABLES[key] }, function () {
+        fetchTable(key).then(function (rows) {
+          state[key] = rows;
+          renderApp();
+        });
+      })
+      .subscribe();
+    realtimeChannels.push(ch);
+  });
+}
+function unsubscribeRealtime() {
+  realtimeChannels.forEach(function (ch) { supabase.removeChannel(ch); });
+  realtimeChannels = [];
+}
+
+function init() {
+  document.addEventListener("click", onClick);
+  document.addEventListener("submit", onSubmit);
+  document.addEventListener("input", onInput);
+
+  supabase.auth.getSession().then(function (res) {
+    var session = res.data && res.data.session;
+    if (!session) {
+      state.ready = true;
+      renderApp();
+      return;
+    }
+    return enterApp(session.user).catch(function (err) {
+      state.loginError = err.message || "Gagal memuat data.";
+      state.ready = true;
+      renderApp();
+    });
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
+</script>
+</body>
+</html>
